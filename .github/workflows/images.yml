@@ -1,0 +1,83 @@
+name: OS-Images bauen
+
+# Actions → "OS-Images bauen" → Run workflow.
+#   tag:      Release-Tag (z. B. v0.1.2) – baut diesen Stand und hängt die Images an das Release.
+#             Leer = Teststand von main bauen, ohne Upload.
+#   profiles: "all" oder eine Komma-Liste, z. B. "pc-x86_64,rpi-arm64"
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release-Tag (leer = nur testen)
+        required: false
+        default: ""
+      profiles:
+        description: Profile (all oder Komma-Liste)
+        required: false
+        default: all
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          WANT: ${{ inputs.profiles }}
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          # arm64 profiles build natively on ARM runners; armhf/riscv64 run through qemu on x86
+          # (GitHub's ARM runners cannot execute 32-bit ARM code).
+          all_ = [
+              {"profile": "pc-x86_64", "runner": "ubuntu-24.04"},
+              {"profile": "pc-i686", "runner": "ubuntu-24.04"},
+              {"profile": "arm64-uefi", "runner": "ubuntu-24.04-arm"},
+              {"profile": "rpi-arm64", "runner": "ubuntu-24.04-arm"},
+              {"profile": "rpi-armhf", "runner": "ubuntu-24.04"},
+              {"profile": "riscv64", "runner": "ubuntu-24.04"},
+          ]
+          want = [w.strip() for w in (os.environ.get("WANT") or "all").split(",") if w.strip()]
+          sel = [p for p in all_ if "all" in want or p["profile"] in want]
+          print("matrix=" + json.dumps({"include": sel}))
+          EOF
+
+  image:
+    needs: plan
+    name: ${{ matrix.profile }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Platz schaffen
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/share/boost /usr/local/.ghcup || true
+          df -h /
+      - name: Build-Abhängigkeiten
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q mmdebstrap qemu-user-static binfmt-support dosfstools exfatprogs \
+            e2fsprogs fdisk curl gpg rsync xz-utils debian-archive-keyring udev
+      - name: Image bauen
+        run: sudo RF_WORK="$RUNNER_TEMP/rf-build" ./os/build.sh "${{ matrix.profile }}" --out "$PWD/out"
+      - name: Prüfsumme
+        run: |
+          sudo rm -f out/*.img
+          sudo chown -R "$(id -u)" out
+          cd out && sha256sum *.img.xz | tee "$(ls *.img.xz).sha256"
+          ls -la
+      - name: An Release anhängen
+        if: inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" out/*.img.xz out/*.sha256 --clobber --repo "${{ github.repository }}"

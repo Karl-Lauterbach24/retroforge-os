@@ -47,7 +47,7 @@ Steuerung per Tastatur: Pfeiltasten, **Enter** = A, **Esc** = B, **Tab** = X (Op
 ## OS-Image bauen
 
 > **Status 0.1.0:** Der Image-Build ist noch experimentell und nicht auf echter Hardware verifiziert.
-> Er lässt sich auch direkt auf GitHub starten: *Actions → Build OS image → Run workflow*.
+> Er lässt sich auch direkt auf GitHub starten: *Actions → OS-Images bauen → Run workflow*.
 
 ```bash
 docker build -t retroforge-builder os/

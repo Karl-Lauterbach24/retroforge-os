@@ -8,7 +8,8 @@
 # Dockerfile); foreign architectures are built through qemu-user-static/binfmt.
 #
 # Host packages: mmdebstrap qemu-user-static binfmt-support dosfstools exfatprogs
-#                e2fsprogs fdisk grub-pc-bin grub-efi-amd64-bin curl python3 rsync
+#                e2fsprogs fdisk curl gpg python3 rsync xz-utils debian-archive-keyring
+# RF_WORK=<dir> moves the (large) working directory, e.g. to a bigger disk.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,7 +29,7 @@ done
 # shellcheck source=/dev/null
 source "$HERE/profiles/$PROFILE.conf"
 VERSION="$(python3 -c "import sys; sys.path.insert(0,'$SRC'); import retroforge; print(retroforge.__version__)")"
-WORK="$HERE/build/$PROFILE"; ROOT="$WORK/rootfs"
+WORK="${RF_WORK:-$HERE/build}/$PROFILE"; ROOT="$WORK/rootfs"
 mkdir -p "$WORK" "$OUT"
 log() { printf '\033[1;35m[retroforge]\033[0m %s\n' "$*"; }
 list() { for l in "$@"; do grep -vE '^\s*(#|$)' "$HERE/packages/$l.list"; done | tr '\n' ' '; }
@@ -36,36 +37,54 @@ list() { for l in "$@"; do grep -vE '^\s*(#|$)' "$HERE/packages/$l.list"; done |
 # ---------------------------------------------------------------------------
 log "1/6 Basis-System ($SUITE/$ARCH) mit mmdebstrap"
 rm -rf "$ROOT"
-KEYOPTS=()
-if [[ -n "${EXTRA_KEY_URL:-}" ]]; then
-  curl -fsSL "$EXTRA_KEY_URL" | gpg --dearmor > "$WORK/extra.gpg"
-  KEYOPTS+=(--keyring="$WORK/extra.gpg")
-  KEYOPTS+=(--setup-hook="mkdir -p \"\$1/usr/share/keyrings\"; cp $WORK/extra.gpg \"\$1/usr/share/keyrings/raspberrypi-archive-keyring.gpg\"")
-fi
+# Keys are referenced per source line (signed-by), so the host's own keyring is never replaced.
+# During bootstrap they point at files in $WORK; afterwards they are copied into the image.
+KEYDIR="$WORK/keys"; mkdir -p "$KEYDIR"
+MAINKEY=/usr/share/keyrings/debian-archive-keyring.gpg
 if [[ -n "${RASPBIAN_KEY_URL:-}" ]]; then
-  curl -fsSL "$RASPBIAN_KEY_URL" | gpg --dearmor > "$WORK/raspbian.gpg"
-  KEYOPTS+=(--keyring="$WORK/raspbian.gpg")
+  curl -fsSL "$RASPBIAN_KEY_URL" | gpg --dearmor > "$KEYDIR/raspbian-archive-keyring.gpg"
+  MAINKEY="$KEYDIR/raspbian-archive-keyring.gpg"
 fi
+[[ -f "$MAINKEY" ]] || { echo "Schlüssel $MAINKEY fehlt (Paket debian-archive-keyring installieren)"; exit 1; }
+SOURCES=()
 COMPONENTS="main contrib non-free non-free-firmware"
 [[ "$MIRROR" == *raspbian* ]] && COMPONENTS="main contrib non-free rpi"
+SOURCES+=("deb [signed-by=$MAINKEY] $MIRROR $SUITE $COMPONENTS")
+if [[ -n "${EXTRA_KEY_URL:-}" ]]; then
+  curl -fsSL "$EXTRA_KEY_URL" | gpg --dearmor > "$KEYDIR/raspberrypi-archive-keyring.gpg"
+  SOURCES+=("${EXTRA_REPO//\/usr\/share\/keyrings/$KEYDIR}")
+fi
+KEYPKG=debian-archive-keyring
+[[ "$MIRROR" == *raspbian* ]] && KEYPKG=raspbian-archive-keyring
 mmdebstrap --architectures="$ARCH" --variant=minbase --components="$COMPONENTS" \
-  --include="systemd,systemd-sysv,apt,ca-certificates,locales" "${KEYOPTS[@]}" \
-  "$SUITE" "$ROOT" "deb $MIRROR $SUITE $COMPONENTS" ${EXTRA_REPO:+"$EXTRA_REPO"}
+  --include="systemd,systemd-sysv,apt,ca-certificates,locales,$KEYPKG" \
+  "$SUITE" "$ROOT" "${SOURCES[@]}"
+# make the image's apt sources point at keys inside the image
+mkdir -p "$ROOT/usr/share/keyrings"
+cp "$KEYDIR"/*.gpg "$ROOT/usr/share/keyrings/" 2>/dev/null || true
+find "$ROOT/etc/apt" -name '*.list' -o -name '*.sources' | xargs -r sed -i "s|$KEYDIR|/usr/share/keyrings|g"
 
 # ---------------------------------------------------------------------------
 log "2/6 Pakete, Kernel & Treiber"
 mount --bind /dev "$ROOT/dev"; mount -t proc proc "$ROOT/proc"; mount -t sysfs sys "$ROOT/sys"
 cleanup() { umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true; [[ -n "${LOOP:-}" ]] && losetup -d "$LOOP" 2>/dev/null || true; }
 trap cleanup EXIT
+rm -f "$ROOT/etc/resolv.conf"; cp -L /etc/resolv.conf "$ROOT/etc/resolv.conf"   # DNS inside the chroot
+printf '#!/bin/sh\nexit 101\n' > "$ROOT/usr/sbin/policy-rc.d"; chmod +x "$ROOT/usr/sbin/policy-rc.d"
 cat > "$ROOT/tmp/install.sh" <<'EOS'
 #!/bin/bash
-# best-effort install: whole list first, then package by package (names differ between suites)
+# $1 = packages, $2 = required|optional
+# required: must install, errors are shown and abort the build
+# optional: whole list first, then package by package (names differ between suites)
 set -u
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -q
-inst() { apt-get install -y -q --no-install-recommends "$@" >/dev/null 2>&1 && return 0
-         for p in "$@"; do apt-get install -y -q --no-install-recommends "$p" >/dev/null 2>&1 || echo "  übersprungen: $p"; done; }
-inst $1
+[[ -f /tmp/.apt-updated ]] || { apt-get update -q || exit 1; touch /tmp/.apt-updated; }
+if [[ "${2:-optional}" == required ]]; then
+  apt-get install -y -q --no-install-recommends $1
+  exit $?
+fi
+apt-get install -y -q --no-install-recommends $1 >/dev/null 2>&1 && exit 0
+for p in $1; do apt-get install -y -q --no-install-recommends "$p" >/dev/null 2>&1 || echo "  übersprungen: $p"; done
 EOS
 chmod +x "$ROOT/tmp/install.sh"
 BOOTPKGS=""
@@ -78,9 +97,12 @@ case "$BOOT" in
 esac
 NVPKGS=""
 [[ "${NVIDIA:-0}" == 1 ]] && NVPKGS="nvidia-open-kernel-dkms nvidia-driver firmware-nvidia-gsp linux-headers-amd64"
-for group in "$KERNEL $BOOTPKGS" "$(list $PACKAGE_LISTS)" "$NVPKGS" "$(list ${OPTIONAL_LISTS:-})"; do
-  [[ -n "${group// }" ]] && chroot "$ROOT" /tmp/install.sh "$group"
+log "  Kernel & Bootloader: $KERNEL $BOOTPKGS"
+chroot "$ROOT" /tmp/install.sh "$KERNEL $BOOTPKGS" required
+for group in "$(list $PACKAGE_LISTS)" "$NVPKGS" "$(list ${OPTIONAL_LISTS:-})"; do
+  if [[ -n "${group// }" ]]; then chroot "$ROOT" /tmp/install.sh "$group" optional; fi
 done
+ls "$ROOT/lib/modules" >/dev/null 2>&1 || { echo "Kein Kernel im Image – Abbruch."; exit 1; }
 
 # ---------------------------------------------------------------------------
 log "3/6 RetroForge installieren & System konfigurieren"
@@ -105,7 +127,8 @@ systemctl disable getty@tty1.service ssh.service >/dev/null 2>&1 || true
 systemctl mask systemd-networkd-wait-online.service NetworkManager-wait-online.service >/dev/null 2>&1 || true
 python3 -m compileall -q /opt/retroforge/retroforge
 apt-get clean
-rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /tmp/install.sh
+rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /tmp/install.sh /tmp/.apt-updated
+rm -f /usr/sbin/policy-rc.d /etc/resolv.conf
 EOS
 # trim locales to de/en (saves ~100 MB)
 find "$ROOT/usr/share/locale" -mindepth 1 -maxdepth 1 ! -name 'de*' ! -name 'en*' ! -name 'locale.alias' -exec rm -rf {} + || true
@@ -168,6 +191,8 @@ fi
 LOOP=$(losetup --show -fP "$IMG")
 if [[ "$BOOT" == rpi ]]; then P_BOOT=${LOOP}p1; P_ROOT=${LOOP}p2; P_DATA=${LOOP}p3
 else P_BOOT=${LOOP}p2; P_ROOT=${LOOP}p3; P_DATA=${LOOP}p4; fi
+for _ in $(seq 20); do [[ -b "$P_DATA" ]] && break; partx -u "$LOOP" 2>/dev/null || true; udevadm settle 2>/dev/null || true; sleep 0.5; done
+[[ -b "$P_DATA" ]] || { echo "Partitionen von $LOOP erscheinen nicht"; exit 1; }
 mkfs.vfat -F 32 -n RF-BOOT "$P_BOOT" >/dev/null
 mkfs.ext4 -q -L RF-ROOT -O ^has_journal -m 0 "$P_ROOT"   # no journal: fewer writes on SD cards
 mkfs.exfat -L RETROFORGE "$P_DATA" >/dev/null
@@ -190,7 +215,7 @@ for d in dev proc sys; do mount --bind "/$d" "$MNT/$d"; done
 CMDLINE="root=LABEL=RF-ROOT rw quiet splash loglevel=3 vt.global_cursor_default=0 consoleblank=0 nowatchdog"
 case "$BOOT" in
   grub-hybrid|grub-hybrid32|grub-efi-arm64|grub-efi-riscv64)
-    chroot "$MNT" update-initramfs -c -k all >/dev/null
+    chroot "$MNT" update-initramfs -u -k all >/dev/null
     KVER=$(ls "$MNT/lib/modules" | sort -V | tail -1)
     mkdir -p "$MNT/boot/grub"
     sed -e "s|@KVER@|$KVER|g" -e "s|@CMDLINE@|$CMDLINE|g" "$HERE/boot/grub.cfg" > "$MNT/boot/grub/grub.cfg"

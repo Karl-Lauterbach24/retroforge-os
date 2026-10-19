@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht
+## 0.1.2 – 2026-10-19 · Vorschau
 
 ### Neu
 - **Klare Meldungen für nicht unterstützte Discs:** Jede Art (PS3, verschlüsselte Blu-ray, unlesbare Disc,
@@ -14,6 +14,7 @@
 - Disc-Plugin: andere Plugins können über `disc_handler` Aktionen für nicht unterstützte Discs anbieten.
 - Dialoge brechen lange Hinweistexte um und heben Warnungen farblich hervor.
 - OS-Image: `udisks2` und Polkit-Regel zum Einhängen von Discs.
+- **Image-Build:** Schlüssel pro Paketquelle (`signed-by`) statt Ersetzen des Schlüsselbunds, DNS und `policy-rc.d` im chroot, Kernel-/Bootloader-Pakete werden nicht mehr still übersprungen, Warten auf Loop-Partitionen, `update-initramfs -u`. Neuer Workflow *OS-Images bauen* baut alle 6 Profile und hängt sie an das Release.
 
 ## 0.1.1 – 2026-10-19 · Vorschau
 
