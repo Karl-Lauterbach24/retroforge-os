@@ -3,7 +3,8 @@ polkit.addRule(function(action, subject) {
     if (subject.user == "rf" && (
         action.id.indexOf("org.freedesktop.login1.") == 0 ||
         action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
-        action.id.indexOf("org.bluez.") == 0)) {
+        action.id.indexOf("org.bluez.") == 0 ||
+        action.id.indexOf("org.freedesktop.udisks2.filesystem-") == 0)) {
         return polkit.Result.YES;
     }
 });

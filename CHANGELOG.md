@@ -1,5 +1,20 @@
 # Changelog
 
+## Unveröffentlicht
+
+### Neu
+- **Klare Meldungen für nicht unterstützte Discs:** Jede Art (PS3, verschlüsselte Blu-ray, unlesbare Disc,
+  Audio-CD, unbekannt) bekommt den Titel „Nicht unterstützt: …“, eine Begründung und einen Hinweis, was stattdessen geht.
+- **Plugin `ps3-disc` (optional, standardmäßig aus):** sichert PS3-Discs über das extern installierte
+  ps3-disc-dumper und legt das Ergebnis nach `roms/ps3/`. Es umgeht einen wirksamen Kopierschutz; die Nutzung erfolgt
+  auf eigene Gefahr. Die Warnung muss beim Aktivieren und vor jeder Nutzung bestätigt werden. Das Plugin enthält keinen
+  Entschlüsselungscode und lädt nichts automatisch herunter.
+- Plugins können eine Warnung in `plugin.json` (`"warning"`) angeben; der Plugin-Bildschirm verlangt dann eine
+  Bestätigung und markiert sie mit „eigene Gefahr“.
+- Disc-Plugin: andere Plugins können über `disc_handler` Aktionen für nicht unterstützte Discs anbieten.
+- Dialoge brechen lange Hinweistexte um und heben Warnungen farblich hervor.
+- OS-Image: `udisks2` und Polkit-Regel zum Einhängen von Discs.
+
 ## 0.1.1 – 2026-10-19 · Vorschau
 
 ### Neu

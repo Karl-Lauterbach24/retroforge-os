@@ -1,0 +1,10 @@
+{
+ "id": "ps3-disc",
+ "name": "PS3-Disc-Sicherung",
+ "version": "0.1",
+ "api": 1,
+ "author": "RetroForge",
+ "default_enabled": false,
+ "description": "Sichert PS3-Discs über das externe ps3-disc-dumper – umgeht den Kopierschutz, Nutzung auf eigene Gefahr.",
+ "warning": "Dieses Plugin umgeht den wirksamen Kopierschutz von PS3-Discs über das externe Programm ps3-disc-dumper und öffentliche Disc-Schlüssel. Das ist in vielen Ländern verboten, in Deutschland nach § 95a UrhG auch für Privatkopien eigener Discs. Die Nutzung erfolgt ausschließlich auf eigene Gefahr; RetroForge übernimmt keine Haftung."
+}

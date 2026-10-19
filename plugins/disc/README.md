@@ -13,11 +13,15 @@ Disc einlegen, RetroForge erkennt das System und fragt: **Direkt spielen**, **Au
 | PC-FX | Kennung `PC-FX:Hu_CD-ROM` | Beetle PC-FX (`cdrom://`) | CD → CHD |
 | 3DO | Opera-Dateisystem | Opera (`cdrom://`) | CD → CHD |
 | PC-CD-ROM | ISO 9660 ohne Konsolenkennung | – | CD → CHD (für DOSBox Pure) |
-| PS3 | `PS3_DISC.SFB` | ❌ | ❌ verschlüsselt, Hinweis auf ps3-disc-dumper + IRD |
+| PS3 | `PS3_DISC.SFB` | ❌ | ❌ nicht unterstützt – nur über das optionale Plugin [PS3-Disc-Sicherung](../ps3-disc/README.md), das den Kopierschutz umgeht (auf eigene Gefahr) |
 | PS4 / PS5 / Xbox One/Series | Blu-ray ohne lesbares Dateisystem | ❌ | ❌ verschlüsselt, Schlüssel nur in der Konsole |
 | GameCube / Wii / Wii U / Xbox / Dreamcast | nicht lesbar | ❌ | ❌ Format für PC-Laufwerke unlesbar |
 
 Gemischte CDs (Audio + Daten), deren Datenspur sich nicht eindeutig zuordnen lässt, fragen nach dem System.
+Jede nicht unterstützte Disc bekommt eine eigene Meldung („Nicht unterstützt: …“) mit Begründung und Hinweis,
+was stattdessen geht. Plugins können für ein solches Problem eine Aktion anbieten, indem sie einen
+`disc_handler` registrieren (Schlüssel = Problem, z. B. `ps3`); diese Aktion erscheint immer zusammen mit
+ihrem Warnhinweis.
 
 ## Sichern
 

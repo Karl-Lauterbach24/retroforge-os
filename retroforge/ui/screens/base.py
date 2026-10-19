@@ -106,10 +106,13 @@ class Dialog(Screen):
 class MenuDialog(Dialog):
     """items: [(label, callback)] or [(label, callback, enabled)]; callback(app) or None."""
 
-    def __init__(self, app, title, items, subtitle=None):
+    def __init__(self, app, title, items, subtitle=None, warn=False):
         super().__init__(app, title)
         self.items = [(it[0], it[1], it[2] if len(it) > 2 else True) for it in items]
         self.subtitle = subtitle
+        self.warn = warn                       # subtitle is a warning (legal notice, data loss …)
+        if subtitle and len(str(subtitle)) > 70:
+            self.width = 820
         self.nav = ListNav(len(self.items), 9)
         while self.items and not self.items[self.nav.i][2] and self.nav.i < len(self.items) - 1:
             self.nav.i += 1
@@ -138,14 +141,26 @@ class MenuDialog(Dialog):
         super().update(dt)
         self.nav.update(dt)
 
+    def sub_lines(self):
+        """Subtitle wrapped to the dialog width; paragraphs separated by newlines."""
+        if not self.subtitle:
+            return []
+        out = []
+        for para in str(self.subtitle).split("\n"):
+            out += w.wrap(self.theme, para, 16, self.width - 56) or [""]
+        return out[:10]
+
     def draw(self, surf):
         rows = min(len(self.items), 9)
-        sub_h = 30 if self.subtitle else 0
+        lines = self.sub_lines()
+        sub_h = len(lines) * 22 + 10 if lines else 0
         rect = self.frame(surf, 90 + sub_h + rows * 46)
         th = self.theme
         y0 = rect.y + 64
-        if self.subtitle:
-            w.text(surf, th, self.subtitle, (rect.x + 28, y0 - 4), 16, th.c["muted"], max_w=rect.w - 56)
+        if lines:
+            col = th.c["warn"] if self.warn else th.c["muted"]
+            for k, line in enumerate(lines):
+                w.text(surf, th, line, (rect.x + 28, y0 - 4 + k * 22), 16, col)
             y0 += sub_h
         clip = surf.get_clip()
         surf.set_clip(pygame.Rect(rect.x, y0, rect.w, rows * 46))
@@ -164,8 +179,8 @@ class MenuDialog(Dialog):
 
 
 class ConfirmDialog(MenuDialog):
-    def __init__(self, app, title, text, on_yes, yes="Ja", no="Abbrechen"):
-        super().__init__(app, title, [(yes, lambda a: on_yes()), (no, None)], subtitle=text)
+    def __init__(self, app, title, text, on_yes, yes="Ja", no="Abbrechen", warn=False):
+        super().__init__(app, title, [(yes, lambda a: on_yes()), (no, None)], subtitle=text, warn=warn)
 
 
 class InfoDialog(Dialog):

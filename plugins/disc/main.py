@@ -17,8 +17,6 @@ from retroforge.settings import GLOBAL, SettingDef
 
 BUSY_SCREENS = ("BootScreen", "LaunchScreen", "RunningScreen", "ProgressDialog", "MenuDialog",
                 "ConfirmDialog", "InfoDialog", "Saver")
-PROBLEM_TITLE = {"ps3": "PS3-Disc erkannt", "bd": "Blu-ray erkannt", "unreadable": "Disc nicht lesbar",
-                 "audio": "Audio-CD erkannt", "unknown": "Unbekannte Disc"}
 
 
 def _load(name, path):
@@ -72,11 +70,16 @@ def register(api):
     def show(app, info):
         reg = core.registry
         if info.problem:
+            title, lines = drive.UNSUPPORTED[info.problem]
+            handler = reg.get("disc_handler", info.problem)
+            if handler:   # a plugin offers a way (e.g. PS3 discs) – always behind its own warning
+                app.sfx("select")
+                app.menu(handler["title"], [(handler["label"], lambda a: handler["action"](a, info)),
+                                            ("Abbrechen", None)],
+                         subtitle=(f"Disc: {info.title}\n" if info.label else "") + handler["warning"], warn=True)
+                return
             app.sfx("error")
-            lines = list(drive.UNSUPPORTED[info.problem])
-            if info.label:
-                lines = [f"Disc: {info.label}", ""] + lines
-            app.info(PROBLEM_TITLE.get(info.problem, "Disc"), lines)
+            app.info(title, ([f"Disc: {info.title}", ""] if info.label else []) + list(lines))
             return
         if info.candidates:
             app.menu("Welches System ist diese Disc?",

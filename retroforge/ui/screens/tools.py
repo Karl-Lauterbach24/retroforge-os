@@ -270,9 +270,16 @@ class PluginsScreen(ListScreen):
         if a == "ok" and self.rows:
             p = self.rows[self.nav.i]
             on = not self.core.plugins.enabled(p)
-            self.core.plugins.set_enabled(p.id, on)
-            self.app.sfx("toggle")
-            self.app.toast(f"{p.name} {'aktiviert' if on else 'deaktiviert'} – wirkt nach Neustart")
+
+            def apply():
+                self.core.plugins.set_enabled(p.id, on)
+                self.app.sfx("toggle")
+                self.app.toast(f"{p.name} {'aktiviert' if on else 'deaktiviert'} – wirkt nach Neustart")
+            if on and p.warning:
+                self.app.confirm(f"{p.name} aktivieren?", p.warning, apply,
+                                 yes="Verstanden – auf eigene Gefahr aktivieren", warn=True)
+            else:
+                apply()
             return True
         return False
 
@@ -292,7 +299,9 @@ class PluginsScreen(ListScreen):
             lbl, col = "nach Neustart an", th.c["accent2"]
         if not enabled and p.status == "loaded":
             lbl, col = "nach Neustart aus", th.c["warn"]
-        w.pill(surf, th, lbl, (r.right - 16, r.centery), col, 13, anchor="midright")
+        box = w.pill(surf, th, lbl, (r.right - 16, r.centery), col, 13, anchor="midright")
+        if p.warning:
+            w.pill(surf, th, "eigene Gefahr", (box.x - 8, r.centery), th.c["warn"], 13, anchor="midright")
 
     def hints(self):
         return [("ok", "An/Aus"), ("back", "Zurück")]

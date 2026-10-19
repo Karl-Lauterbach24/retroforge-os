@@ -115,6 +115,7 @@ class TestIdentify(unittest.TestCase):
         self.assertEqual(info.system, "dos")
         self.assertEqual(info.actions(), {"play": False, "rip": True})
         self.assertEqual(info.title, "Doom2")
+        self.assertEqual(drive.DiscInfo(label="BLES00932").title, "BLES00932")
 
     def test_retroarch_path(self):
         self.assertEqual(drive.retroarch_path("/dev/sr0"), "cdrom://drive1.cue")
@@ -226,6 +227,93 @@ class TestPluginPlay(unittest.TestCase):
             self.assertEqual(plan.cmd[-1], "cdrom://drive1.cue")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class StubApp:
+    def __init__(self):
+        self.calls = []
+
+    def sfx(self, name):
+        pass
+
+    def info(self, title, lines):
+        self.calls.append(("info", title, lines))
+
+    def menu(self, title, items, subtitle=None, warn=False):
+        self.calls.append(("menu", title, items, subtitle, warn))
+
+    def launch(self, game, emulator_id=None):
+        self.calls.append(("launch", game, emulator_id))
+
+
+class TestUnsupportedDiscs(unittest.TestCase):
+    def boot(self, enable=()):
+        self.tmp = Path(tempfile.mkdtemp())
+        if enable:
+            cfg = self.tmp / "system" / "retroforge"
+            cfg.mkdir(parents=True)
+            (cfg / "settings.json").write_text('{"global": {"plugins.enabled": %s}}'
+                                               % str(list(enable)).replace("'", '"'), encoding="utf-8")
+        self.core = Core(str(self.tmp)).boot(do_probe=False, scan=False)
+        self.disc = self.core.registry.service("disc")
+        return self.disc
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def info(self, **kw):
+        return self.disc["drive"].DiscInfo(device="/dev/sr0", media=self.disc["drive"].Media(True, "bd"), **kw)
+
+    def test_every_unsupported_disc_gets_a_message(self):
+        disc = self.boot()
+        for problem in ("bd", "unreadable", "audio", "unknown"):
+            app = StubApp()
+            disc["show"](app, self.info(problem=problem))
+            kind, title, lines = app.calls[0]
+            self.assertEqual(kind, "info")
+            self.assertTrue(title.startswith("Nicht unterstützt"), title)
+            self.assertTrue(lines)
+
+    def test_ps3_without_plugin_points_to_plugin_and_risk(self):
+        disc = self.boot()
+        self.assertEqual(self.core.plugins.plugins["ps3-disc"].status, "disabled")    # opt-in only
+        app = StubApp()
+        disc["show"](app, self.info(system="ps3", problem="ps3", label="BLES00001"))
+        kind, title, lines = app.calls[0]
+        text = " ".join(lines)
+        self.assertEqual((kind, title), ("info", "Nicht unterstützt: PS3-Disc"))
+        for needle in ("PS3-Disc-Sicherung", "Kopierschutz", "eigene Gefahr", "§ 95a"):
+            self.assertIn(needle, text)
+
+    def test_ps3_plugin_warns_launches_dumper_and_files_result(self):
+        disc = self.boot(enable=["ps3-disc"])
+        p = self.core.plugins.plugins["ps3-disc"]
+        self.assertEqual(p.status, "loaded")
+        self.assertIn("§ 95a", p.warning)                      # shown before enabling
+        app = StubApp()
+        disc["show"](app, self.info(system="ps3", problem="ps3", label="BLES00001"))
+        kind, title, items, subtitle, warn = app.calls[0]
+        self.assertEqual(kind, "menu")
+        self.assertTrue(warn)
+        self.assertIn("eigene Gefahr", subtitle)
+        self.assertIn("Kopierschutz", subtitle)
+        start = items[0][1]
+        start(app)                                             # dumper not installed yet
+        self.assertEqual(app.calls[-1][1], "ps3-disc-dumper fehlt")
+        home = self.tmp / "emulators" / "ps3-disc-dumper"
+        home.mkdir(parents=True)
+        (home / "ps3-disc-dumper").write_bytes(b"")
+        start(app)
+        _, game, emu_id = app.calls[-1]
+        self.assertEqual(emu_id, "ps3-disc-dumper")
+        plan = self.core.launcher.plan(game, emu_id)
+        self.assertEqual(plan.cmd, [str(home / "ps3-disc-dumper")])
+        self.assertEqual(plan.cwd, str(home))
+        out = home / "BLES00001 - Test Game"
+        (out / "PS3_GAME").mkdir(parents=True)                 # what the dumper produces
+        self.core.registry.emit("game.after_exit", plan=plan, returncode=0, seconds=600, core=self.core)
+        self.assertTrue((self.tmp / "roms" / "ps3" / "BLES00001 - Test Game.ps3" / "PS3_GAME").is_dir())
+        self.assertFalse(out.exists())
 
 
 if __name__ == "__main__":

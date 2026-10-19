@@ -7,6 +7,7 @@ supply facts about the medium.
 import glob
 import os
 import platform
+import re
 import struct
 import subprocess
 from dataclasses import dataclass, field
@@ -28,20 +29,32 @@ DISC_SYSTEMS = {
     "dos": {"play": [], "rip": "cd"},
 }
 
+# Shown when a disc can't be played or saved: (title, explanation lines). Plugins can offer an
+# action for a problem by registering a "disc_handler" with the problem key (see plugins/ps3-disc).
 UNSUPPORTED = {
-    "ps3": ["PS3-Discs sind verschlüsselt und lassen sich hier weder starten noch sichern.",
-            "Mit einem kompatiblen Blu-ray-Laufwerk geht es außerhalb von RetroForge über „ps3-disc-dumper“ "
-            "und die öffentlichen Disc-Schlüssel (IRD). Das Ergebnis kommt dann nach roms/ps3/<Spiel>.ps3/."],
-    "bd": ["Diese Blu-ray ist verschlüsselt (PS4, PS5 oder Xbox One/Series) oder ein Film.",
-           "Das Laufwerk liest zwar die Rohdaten, die Schlüssel stecken aber nur in der Konsole selbst.",
-           "PS5-Spiele laufen in RetroForge nur über einen entschlüsselten Dump einer eigenen, "
-           "gejailbreakten Konsole (Plugin AnyPS5)."],
-    "unreadable": ["Das Laufwerk kann diese Disc nicht lesen.",
-                   "GameCube-, Wii-, Wii-U- und Xbox-Discs sowie die GD-ROM der Dreamcast nutzen Formate, "
-                   "die normale PC-Laufwerke nicht lesen. Solche Spiele lassen sich nur auf der jeweiligen "
-                   "Konsole (z. B. mit CleanRip) sichern."],
-    "audio": ["Das ist eine Audio-CD – kein Spiel."],
-    "unknown": ["Für diese Disc wurde kein unterstütztes System erkannt."],
+    "ps3": ("Nicht unterstützt: PS3-Disc", [
+        "PS3-Discs sind durch einen wirksamen Kopierschutz verschlüsselt. RetroForge unterstützt sie deshalb "
+        "nicht von Haus aus.",
+        "Sichern lässt sich eine PS3-Disc nur über das optionale Plugin „PS3-Disc-Sicherung“. Es umgeht den "
+        "Kopierschutz mit dem externen Werkzeug ps3-disc-dumper – die Nutzung erfolgt auf eigene Gefahr.",
+        "Das Umgehen eines wirksamen Kopierschutzes ist in vielen Ländern verboten, in Deutschland nach "
+        "§ 95a UrhG auch für Privatkopien.",
+        "Aktivieren: Startbildschirm › Plugins › PS3-Disc-Sicherung."]),
+    "bd": ("Nicht unterstützt: verschlüsselte Blu-ray", [
+        "PS4-, PS5- und Xbox-One/Series-Discs sind verschlüsselt, die Schlüssel stecken nur in der Konsole. "
+        "Das Laufwerk liest zwar die Rohdaten, kommt aber nicht an die Spieldaten.",
+        "PS5-Spiele laufen in RetroForge nur über einen entschlüsselten Dump der eigenen Konsole "
+        "(Plugin AnyPS5). Film-Blu-rays werden nicht abgespielt."]),
+    "unreadable": ("Nicht unterstützt: Disc nicht lesbar", [
+        "Das Laufwerk kann diese Disc nicht lesen.",
+        "GameCube-, Wii-, Wii-U- und Xbox-Discs sowie die GD-ROM der Dreamcast nutzen Formate, die normale "
+        "PC-Laufwerke nicht lesen. Solche Spiele lassen sich nur auf der jeweiligen Konsole sichern.",
+        "Ist es eine unterstützte Disc, hilft oft Reinigen oder ein anderes Laufwerk."]),
+    "audio": ("Nicht unterstützt: Audio-CD", [
+        "Das ist eine Audio-CD und kein Spiel – RetroForge spielt keine Audio-CDs ab."]),
+    "unknown": ("Nicht unterstützt: unbekannte Disc", [
+        "Für diese Disc wurde kein unterstütztes System erkannt.",
+        "Unterstützt werden PS1, PS2, Saturn, Mega-CD, PC Engine CD, PC-FX, 3DO und PC-CD-ROMs."]),
 }
 
 
@@ -68,7 +81,9 @@ class DiscInfo:
 
     @property
     def title(self):
-        name = (self.label or "").replace("_", " ").strip().title()
+        name = (self.label or "").strip()
+        if not re.match(r"^[A-Z]{4}[-_ ]?\d{3,5}", name):     # keep serials like BLES00932 as they are
+            name = name.replace("_", " ").strip().title()
         if self.serial and self.serial.replace("-", " ").lower() not in name.lower():
             return f"{name} [{self.serial}]" if name else self.serial
         return name or "Unbenannte Disc"

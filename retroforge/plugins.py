@@ -118,6 +118,7 @@ class PluginInfo:
     api: int = API_VERSION
     entry: str = "main.py"
     default_enabled: bool = True
+    warning: str = ""              # shown (and must be confirmed) before the user enables the plugin
     path: Optional[Path] = None
     builtin: bool = True
     status: str = "unloaded"       # loaded | disabled | error | incompatible

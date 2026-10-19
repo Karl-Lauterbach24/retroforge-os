@@ -124,13 +124,13 @@ class App:
     def redraw(self, seconds=0.6):
         self.redraw_until = max(self.redraw_until, time.time() + seconds)
 
-    def menu(self, title, items, subtitle=None):
+    def menu(self, title, items, subtitle=None, warn=False):
         from .screens.base import MenuDialog
-        return self.push(MenuDialog(self, title, items, subtitle))
+        return self.push(MenuDialog(self, title, items, subtitle, warn))
 
-    def confirm(self, title, text, on_yes, yes="Ja"):
+    def confirm(self, title, text, on_yes, yes="Ja", warn=False):
         from .screens.base import ConfirmDialog
-        return self.push(ConfirmDialog(self, title, text, on_yes, yes))
+        return self.push(ConfirmDialog(self, title, text, on_yes, yes, warn=warn))
 
     def info(self, title, lines):
         from .screens.base import InfoDialog

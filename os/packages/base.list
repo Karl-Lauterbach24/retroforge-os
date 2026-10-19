@@ -37,6 +37,7 @@ mesa-utils-bin
 # --- optical drives: play from disc, save as CHD (plugin 'disc') ---
 cdrdao
 mame-tools
+udisks2
 # --- input: controllers ---
 bluez
 joystick
