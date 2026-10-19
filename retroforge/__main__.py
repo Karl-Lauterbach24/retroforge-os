@@ -51,6 +51,13 @@ def main(argv=None):
     p.add_argument("--scan", action="store_true", help="Bibliothek scannen und Statistik ausgeben")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
+    for stream in (sys.stdout, sys.stderr):
+        # Windows consoles default to cp1252, which can't print the report's bar glyphs
+        if (getattr(stream, "encoding", "") or "").lower() not in ("utf-8", "utf8"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except (AttributeError, ValueError):
+                pass
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
 

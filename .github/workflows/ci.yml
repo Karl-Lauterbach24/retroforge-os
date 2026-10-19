@@ -18,8 +18,8 @@ jobs:
           - os: windows-latest
             python: "3.13"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install pygame-ce
@@ -35,7 +35,7 @@ jobs:
         run: |
           python tools/make_demo_library.py rf-ui-home
           python tools/screenshot.py screenshots --home rf-ui-home
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.13'
         with:
           name: ui-screenshots
@@ -45,7 +45,7 @@ jobs:
     name: Shell scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: bash -n + shellcheck (errors only)
         run: |
           for f in os/build.sh os/qemu-test.sh os/rootfs/usr/local/bin/* os/rootfs/usr/local/sbin/*; do

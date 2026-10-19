@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build-Abhängigkeiten
         run: |
           sudo apt-get update
@@ -27,7 +27,7 @@ jobs:
             e2fsprogs fdisk grub-pc-bin grub-efi-amd64-bin curl gpg rsync xz-utils debian-archive-keyring
       - name: Image bauen
         run: sudo ./os/build.sh ${{ inputs.profile }} ${{ inputs.bundle && '--bundle' || '' }} --out "$PWD/out"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: retroforge-${{ inputs.profile }}
           path: out/*.img.xz
