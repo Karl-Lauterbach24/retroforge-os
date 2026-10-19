@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+# local user data (ROMs, saves, settings) – never commit
+userdata/
+# image build output
+os/build/
+os/out/
+*.img
+*.img.xz

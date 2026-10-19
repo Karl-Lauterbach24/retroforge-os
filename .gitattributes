@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.sh text eol=lf
+os/rootfs/usr/local/** text eol=lf
+*.png binary

@@ -1,0 +1,27 @@
+[Unit]
+Description=RetroForge Frontend
+# runs directly on KMS/DRM – no X11/Wayland session needed
+After=systemd-user-sessions.service retroforge-firstboot.service retroforge-gpu.service sound.target
+Wants=retroforge-gpu.service
+Conflicts=getty@tty1.service
+ConditionKernelCommandLine=!retroforge.maintenance=1
+
+[Service]
+User=rf
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+Environment=RETROFORGE_HOME=/userdata
+ExecStart=/usr/local/bin/retroforge-session
+Restart=always
+RestartSec=2
+# give games the CPU, keep the frontend snappy
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

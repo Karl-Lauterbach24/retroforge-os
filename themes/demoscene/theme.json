@@ -1,0 +1,14 @@
+{
+  "id": "demoscene",
+  "name": "Demoscene Plasma",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#100018", "bg2": "#2a0040", "panel": "#0a0010c8", "panel2": "#1a0028f0",
+    "accent": "#ffcc00", "accent2": "#00e5ff", "text": "#ffffff", "muted": "#b9a6d6"
+  },
+  "background": {"type": "plasma", "darkness": 0.55},
+  "title_font": "pixel",
+  "radius": 12,
+  "soundpack": "arcade",
+  "music": {"tempo": 140, "root": 52, "scale": "minor", "progression": [0, 0, 5, 6], "style": "drive"}
+}

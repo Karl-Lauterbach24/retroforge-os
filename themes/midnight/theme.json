@@ -1,0 +1,14 @@
+{
+  "id": "midnight",
+  "name": "Midnight (minimal)",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#05070d", "bg2": "#0c1220", "panel": "#0e1524d0", "panel2": "#141d31f2",
+    "accent": "#7aa2ff", "accent2": "#9be7ff", "text": "#e8edf7", "muted": "#7d8aa6"
+  },
+  "background": {"type": "starfield", "speed": 0.08, "count": 160},
+  "title_font": "sans",
+  "radius": 18,
+  "soundpack": "soft",
+  "music": {"tempo": 84, "root": 55, "scale": "lydian", "progression": [0, 4, 1, 5], "style": "calm"}
+}

@@ -1,0 +1,17 @@
+# GPUs, Wi-Fi, Bluetooth, audio DSPs, CPU microcode – old and new
+firmware-linux-free
+firmware-misc-nonfree
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-intel-misc
+firmware-realtek
+firmware-iwlwifi
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+firmware-libertas
+firmware-intel-sound
+firmware-sof-signed
+bluez-firmware
+intel-microcode
+amd64-microcode

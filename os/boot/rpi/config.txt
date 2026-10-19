@@ -1,0 +1,27 @@
+# RetroForge OS – Raspberry Pi
+auto_initramfs=1
+disable_splash=1
+disable_overscan=1
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+dtparam=audio=on
+camera_auto_detect=0
+display_auto_detect=1
+hdmi_enable_4kp60=0
+
+[pi3]
+arm_64bit=1
+gpu_mem=128
+
+[pi4]
+arm_64bit=1
+arm_boost=1
+
+[pi5]
+# PCIe gen 3 for NVMe-HATs (faster game loading); remove if unstable
+dtparam=pciex1_gen=3
+
+[all]
+# Uncomment for overclocking (needs cooling!)
+#over_voltage_delta=50000
+#arm_freq=2800

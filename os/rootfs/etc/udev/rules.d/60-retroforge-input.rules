@@ -1,0 +1,6 @@
+# virtual controllers (Steam Input-style remapping, hotkey daemon)
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+# hidraw access for SDL HIDAPI drivers (DualShock/DualSense rumble+LED, Switch Pro, 8BitDo)
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0660", GROUP="input"
+# keep USB controllers awake
+ACTION=="add", SUBSYSTEM=="usb", ATTR{bInterfaceClass}=="03", TEST=="power/control", ATTR{power/control}="on"

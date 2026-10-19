@@ -1,0 +1,9 @@
+// let the frontend user reboot/power off and manage Wi-Fi/Bluetooth without a password
+polkit.addRule(function(action, subject) {
+    if (subject.user == "rf" && (
+        action.id.indexOf("org.freedesktop.login1.") == 0 ||
+        action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+        action.id.indexOf("org.bluez.") == 0)) {
+        return polkit.Result.YES;
+    }
+});

@@ -1,0 +1,11 @@
+# Optional network share (enable with: systemctl enable --now smbd + copy to smb.conf)
+[global]
+   server string = RetroForge
+   map to guest = Bad User
+   server min protocol = SMB2
+[retroforge]
+   path = /userdata
+   browseable = yes
+   writeable = yes
+   guest ok = yes
+   force user = rf

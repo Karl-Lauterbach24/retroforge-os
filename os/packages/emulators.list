@@ -1,0 +1,9 @@
+# Only the base set lives in the image – everything else is installed on demand
+# from the frontend (or bundled with: build.sh <profile> --bundle).
+retroarch
+libretro-snes9x
+libretro-mgba
+libretro-nestopia
+libretro-gambatte
+libretro-genesisplusgx
+libretro-beetle-pce-fast

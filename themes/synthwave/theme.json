@@ -1,0 +1,14 @@
+{
+  "id": "synthwave",
+  "name": "Synthwave",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#0d0221", "bg2": "#2b1055", "panel": "#12062ccc", "panel2": "#24104ef0",
+    "accent": "#ff2a6d", "accent2": "#05d9e8", "text": "#f6f1ff", "muted": "#a89cc8"
+  },
+  "background": {"type": "synthwave", "speed": 0.35, "sky_top": "#0d0221", "sky_bottom": "#5b1a6e", "floor": "#0b0118"},
+  "title_font": "pixel",
+  "radius": 16,
+  "soundpack": "chiptune",
+  "music": {"tempo": 108, "root": 57, "scale": "minor", "progression": [0, 5, 3, 4], "style": "arp"}
+}

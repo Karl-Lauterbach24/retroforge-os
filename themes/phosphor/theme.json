@@ -1,0 +1,16 @@
+{
+  "id": "phosphor",
+  "name": "Phosphor-Terminal",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#020a04", "bg2": "#06200e", "panel": "#03140ad0", "panel2": "#062a12f0",
+    "accent": "#33ff66", "accent2": "#a6ff4d", "text": "#c8ffd4", "muted": "#4fa865",
+    "good": "#33ff66", "ok": "#a6ff4d", "warn": "#e6ff4d", "bad": "#ff6b4d", "off": "#2f5a3a"
+  },
+  "background": {"type": "phosphor"},
+  "title_font": "pixel",
+  "radius": 4,
+  "crt": true,
+  "soundpack": "arcade",
+  "music": {"tempo": 96, "root": 50, "scale": "dorian", "progression": [0, 3, 6, 4], "style": "arp"}
+}

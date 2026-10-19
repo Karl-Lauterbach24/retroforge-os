@@ -1,0 +1,23 @@
+#!/bin/bash
+# First boot: grow the exFAT userdata partition to the full disk (it is still
+# empty apart from the skeleton, so it is recreated instead of resized),
+# regenerate host keys, seed defaults.
+set -u
+DATA=$(blkid -L RETROFORGE || true)
+if [[ -n "$DATA" ]] && mount "$DATA" /userdata 2>/dev/null; then
+    FRESH=0; [[ -f /userdata/.rf-fresh ]] && FRESH=1
+    umount /userdata
+    if [[ $FRESH == 1 ]]; then
+        DISK="/dev/$(lsblk -no pkname "$DATA")"
+        PARTN=$(cat "/sys/class/block/$(basename "$DATA")/partition")
+        echo ", +" | sfdisk -q -N "$PARTN" --no-reread "$DISK" && partx -u "$DISK" || true
+        udevadm settle
+        mkfs.exfat -L RETROFORGE "$DATA" >/dev/null
+        mount "$DATA" /userdata
+        cp -r /usr/share/retroforge/userdata-skel/. /userdata/
+        umount /userdata
+    fi
+fi
+rm -f /etc/ssh/ssh_host_* && dpkg-reconfigure -f noninteractive openssh-server >/dev/null 2>&1 || true
+systemd-machine-id-setup >/dev/null 2>&1 || true
+mkdir -p /var/lib/retroforge && touch /var/lib/retroforge/firstboot.done

@@ -1,0 +1,15 @@
+{
+  "id": "famicom",
+  "name": "Famicom (hell)",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#efe6d2", "bg2": "#f7f1e3", "panel": "#fffaf0e0", "panel2": "#fffaf0f8",
+    "accent": "#b3001b", "accent2": "#c9a227", "text": "#2a1a14", "muted": "#7d6a5a",
+    "good": "#1f8a4c", "ok": "#2a6fb3", "warn": "#c98a00", "bad": "#b3001b", "off": "#b3a796"
+  },
+  "background": {"type": "gradient", "top": "#f7f1e3", "bottom": "#e2d5b8"},
+  "title_font": "pixel",
+  "radius": 10,
+  "soundpack": "soft",
+  "music": {"tempo": 120, "root": 62, "scale": "major", "progression": [0, 4, 5, 3], "style": "arp"}
+}

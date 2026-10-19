@@ -1,0 +1,7 @@
+# Installed best-effort (skipped if a package isn't in the selected suite)
+gamescope
+dolphin-emu
+ppsspp
+melonds
+intel-media-va-driver-non-free
+grub-efi-ia32-bin

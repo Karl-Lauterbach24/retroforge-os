@@ -1,0 +1,2 @@
+{"id": "save-backup", "name": "Spielstand-Backup", "version": "1.0", "api": 1, "author": "RetroForge",
+ "description": "Sichert vor jedem Start die Spielstände des Spiels als ZIP (Ringpuffer)."}

@@ -1,0 +1,10 @@
+# Mesa covers Intel (i915/xe: crocus/iris/anv/hasvk), AMD (r300/r600/radeonsi/radv),
+# NVIDIA (nouveau/NVK), Broadcom (vc4/v3d), ARM Mali (lima/panfrost/panthor),
+# Qualcomm (freedreno/turnip), Vivante (etnaviv), VMs (virgl/venus/svga) and llvmpipe.
+libgl1-mesa-dri
+mesa-vulkan-drivers
+libegl1
+libgles2
+libgbm1
+mesa-va-drivers
+libsdl2-2.0-0

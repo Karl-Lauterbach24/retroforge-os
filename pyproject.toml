@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retroforge"
+version = "0.1.0"
+description = "RetroForge OS – leichtgewichtiges, plugin-basiertes Retro-Gaming-OS (Frontend + Systemdienste)"
+requires-python = ">=3.9"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+readme = "README.md"
+# Works with classic pygame (Debian: python3-pygame) as well as pygame-ce.
+dependencies = ["pygame>=2.1"]
+
+[project.urls]
+Homepage = "https://github.com/Karl-Lauterbach24/retroforge-os"
+Issues = "https://github.com/Karl-Lauterbach24/retroforge-os/issues"
+
+[project.scripts]
+retroforge = "retroforge.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["retroforge*"]

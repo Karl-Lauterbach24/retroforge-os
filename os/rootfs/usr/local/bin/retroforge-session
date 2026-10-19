@@ -1,0 +1,18 @@
+#!/bin/sh
+# Session wrapper: SDL directly on KMS/DRM, PipeWire audio, sane defaults.
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-kmsdrm}"
+export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-pipewire,pulseaudio,alsa}"
+export SDL_JOYSTICK_HIDAPI=1
+export RETROFORGE_HOME="${RETROFORGE_HOME:-/userdata}"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export PYTHONDONTWRITEBYTECODE=1
+export PYGAME_HIDE_SUPPORT_PROMPT=1
+# hybrid graphics laptops: run games on the dedicated GPU
+if [ "$(ls -d /sys/class/drm/card[0-9] 2>/dev/null | wc -l)" -gt 1 ]; then
+    export DRI_PRIME=1 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia
+fi
+if grep -q "retroforge.safe=1" /proc/cmdline; then
+    export LIBGL_ALWAYS_SOFTWARE=1
+fi
+cd /opt/retroforge || exit 1
+exec python3 -m retroforge

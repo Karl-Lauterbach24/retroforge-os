@@ -1,0 +1,13 @@
+[Unit]
+Description=RetroForge GPU driver selection (NVIDIA proprietary vs. nouveau)
+DefaultDependencies=no
+After=systemd-udevd.service
+Before=retroforge.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/retroforge-gpu-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

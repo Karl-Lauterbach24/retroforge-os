@@ -1,0 +1,18 @@
+#!/bin/bash
+# Chooses the NVIDIA kernel driver at every boot, so one image runs on a
+# GeForce 8800 as well as on an RTX 50:
+#   Turing and newer (PCI device id >= 0x1e00)  -> nvidia-open (proprietary userspace)
+#   older GPUs                                  -> nouveau (Mesa)
+# Both are blacklisted for autoloading in /etc/modprobe.d/retroforge-gpu.conf.
+set -u
+for v in /sys/bus/pci/devices/*/vendor; do
+    [[ "$(cat "$v")" == 0x10de ]] || continue
+    d=$(dirname "$v")
+    [[ "$(cat "$d/class")" == 0x03* ]] || continue          # display controllers only
+    dev=$(( $(cat "$d/device") ))
+    if (( dev >= 0x1e00 )) && modinfo nvidia >/dev/null 2>&1; then
+        modprobe nvidia-drm modeset=1 fbdev=1 && exit 0
+    fi
+    modprobe nouveau
+    exit 0
+done

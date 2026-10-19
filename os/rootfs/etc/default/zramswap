@@ -1,0 +1,4 @@
+# compressed RAM swap: helps 1–4 GB devices with PS2/GameCube emulators
+ALGO=zstd
+PERCENT=50
+PRIORITY=100

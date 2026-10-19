@@ -1,0 +1,15 @@
+{
+  "id": "gameboy",
+  "name": "Game Boy DMG",
+  "author": "RetroForge",
+  "colors": {
+    "bg": "#0f380f", "bg2": "#306230", "panel": "#1f4a1ff0", "panel2": "#306230f8",
+    "accent": "#9bbc0f", "accent2": "#8bac0f", "text": "#e0f8d0", "muted": "#8bac0f",
+    "good": "#9bbc0f", "ok": "#8bac0f", "warn": "#e0f8d0", "bad": "#d0583c", "off": "#306230"
+  },
+  "background": {"type": "dmg", "palette": ["#0f380f", "#1f4a1f", "#8bac0f", "#9bbc0f"]},
+  "title_font": "pixel",
+  "radius": 4,
+  "soundpack": "chiptune",
+  "music": {"tempo": 128, "root": 60, "scale": "major", "progression": [0, 3, 4, 0], "style": "arp"}
+}
