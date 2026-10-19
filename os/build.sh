@@ -265,8 +265,11 @@ case "$BOOT" in
   grub-hybrid|grub-hybrid32|grub-efi-arm64|grub-efi-riscv64)
     chroot "$MNT" update-initramfs -u -k all >/dev/null
     KVER=$(ls "$MNT/lib/modules" | sort -V | tail -1)
+    # the kernel file name differs per architecture (riscv64: vmlinux-*, others: vmlinuz-*)
+    KIMG=$(cd "$MNT/boot" && ls vmlinuz-"$KVER" vmlinux-"$KVER" 2>/dev/null | head -1 || true)
+    [[ -n "$KIMG" ]] || { echo "Kein Kernel-Image für $KVER in /boot"; exit 1; }
     mkdir -p "$MNT/boot/grub"
-    sed -e "s|@KVER@|$KVER|g" -e "s|@CMDLINE@|$CMDLINE|g" "$HERE/boot/grub.cfg" > "$MNT/boot/grub/grub.cfg"
+    sed -e "s|@KVER@|$KVER|g" -e "s|@KIMG@|$KIMG|g" -e "s|@CMDLINE@|$CMDLINE|g" "$HERE/boot/grub.cfg" > "$MNT/boot/grub/grub.cfg"
     case "$BOOT" in
       grub-hybrid)
         chroot "$MNT" grub-install --target=i386-pc --boot-directory=/boot "$LOOP"
@@ -293,13 +296,13 @@ log "Prüfe Boot-Dateien"
 MISSING=0
 need() { for pat in "$@"; do compgen -G "$pat" >/dev/null || { echo "  FEHLT: ${pat#$MNT}"; MISSING=1; }; done; }
 case "$BOOT" in
-  grub-hybrid)      need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+  grub-hybrid)      need "$MNT/boot/$KIMG" "$MNT/boot/initrd.img-$KVER" "$MNT/boot/grub/grub.cfg" \
                          "$MNT/boot/grub/i386-pc/core.img" "$MNT/boot/efi/EFI/BOOT/BOOTX64.EFI" ;;
-  grub-hybrid32)    need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+  grub-hybrid32)    need "$MNT/boot/$KIMG" "$MNT/boot/initrd.img-$KVER" "$MNT/boot/grub/grub.cfg" \
                          "$MNT/boot/grub/i386-pc/core.img" "$MNT/boot/efi/EFI/BOOT/BOOTIA32.EFI" ;;
-  grub-efi-arm64)   need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+  grub-efi-arm64)   need "$MNT/boot/$KIMG" "$MNT/boot/initrd.img-$KVER" "$MNT/boot/grub/grub.cfg" \
                          "$MNT/boot/efi/EFI/BOOT/BOOTAA64.EFI" ;;
-  grub-efi-riscv64) need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+  grub-efi-riscv64) need "$MNT/boot/$KIMG" "$MNT/boot/initrd.img-$KVER" "$MNT/boot/grub/grub.cfg" \
                          "$MNT/boot/efi/EFI/BOOT/BOOTRISCV64.EFI" ;;
   rpi)              need "$MNT/boot/efi/config.txt" "$MNT/boot/efi/cmdline.txt" "$MNT/boot/efi/kernel*.img" \
                          "$MNT/boot/efi/bcm27*.dtb" "$MNT/boot/efi/overlays/vc4-kms-v3d*.dtbo" ;;
