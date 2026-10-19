@@ -40,9 +40,26 @@ rm -rf "$ROOT"
 # Keys are referenced per source line (signed-by), so the host's own keyring is never replaced.
 # During bootstrap they point at files in $WORK; afterwards they are copied into the image.
 KEYDIR="$WORK/keys"; mkdir -p "$KEYDIR"
+# Fetch an archive key from the archive's own keyring package. The old standalone .key files of
+# Raspberry Pi and Raspbian are SHA-1 certified, which Debian's sqv rejects since 2026-02; the
+# keyring packages carry the same keys re-certified with SHA-256/512. The .deb is checked against
+# the SHA256 from the Packages index; the key then has to verify the archive's InRelease.
+fetch_key_pkg() {   # <archive base URL> <package> <output file>
+  local base=$1 pkg=$2 out=$3 tmp file sha
+  tmp=$(mktemp -d)
+  curl -fsSL "$base/dists/$SUITE/main/binary-$ARCH/Packages.gz" | gunzip > "$tmp/Packages"
+  file=$(awk -v p="$pkg" '$1=="Package:"{cur=$2} cur==p && $1=="Filename:"{print $2; exit}' "$tmp/Packages")
+  sha=$(awk -v p="$pkg" '$1=="Package:"{cur=$2} cur==p && $1=="SHA256:"{print $2; exit}' "$tmp/Packages")
+  [[ -n "$file" && -n "$sha" ]] || { echo "Keyring-Paket $pkg nicht in $base gefunden"; exit 1; }
+  curl -fsSL -o "$tmp/k.deb" "$base/$file"
+  echo "$sha  $tmp/k.deb" | sha256sum -c --quiet || { echo "Prüfsumme von $pkg stimmt nicht"; exit 1; }
+  dpkg-deb -x "$tmp/k.deb" "$tmp/x"
+  cp "$(ls "$tmp"/x/usr/share/keyrings/*-keyring.* | head -1)" "$out"
+  rm -rf "$tmp"
+}
 MAINKEY=/usr/share/keyrings/debian-archive-keyring.gpg
-if [[ -n "${RASPBIAN_KEY_URL:-}" ]]; then
-  curl -fsSL "$RASPBIAN_KEY_URL" | gpg --dearmor > "$KEYDIR/raspbian-archive-keyring.gpg"
+if [[ -n "${RASPBIAN_KEY_PKG:-}" ]]; then
+  fetch_key_pkg $RASPBIAN_KEY_PKG "$KEYDIR/raspbian-archive-keyring.gpg"
   MAINKEY="$KEYDIR/raspbian-archive-keyring.gpg"
 fi
 [[ -f "$MAINKEY" ]] || { echo "Schlüssel $MAINKEY fehlt (Paket debian-archive-keyring installieren)"; exit 1; }
@@ -50,8 +67,8 @@ SOURCES=()
 COMPONENTS="main contrib non-free non-free-firmware"
 [[ "$MIRROR" == *raspbian* ]] && COMPONENTS="main contrib non-free rpi"
 SOURCES+=("deb [signed-by=$MAINKEY] $MIRROR $SUITE $COMPONENTS")
-if [[ -n "${EXTRA_KEY_URL:-}" ]]; then
-  curl -fsSL "$EXTRA_KEY_URL" | gpg --dearmor > "$KEYDIR/raspberrypi-archive-keyring.gpg"
+if [[ -n "${EXTRA_KEY_PKG:-}" ]]; then
+  fetch_key_pkg $EXTRA_KEY_PKG "$KEYDIR/raspberrypi-archive-keyring.gpg"
   SOURCES+=("${EXTRA_REPO//\/usr\/share\/keyrings/$KEYDIR}")
 fi
 KEYPKG=debian-archive-keyring
@@ -132,6 +149,8 @@ rm -f /usr/sbin/policy-rc.d /etc/resolv.conf
 EOS
 # trim locales to de/en (saves ~100 MB)
 find "$ROOT/usr/share/locale" -mindepth 1 -maxdepth 1 ! -name 'de*' ! -name 'en*' ! -name 'locale.alias' -exec rm -rf {} + || true
+# done with the chroot: unmount, so du/rsync below never see the host's /proc, /sys and /dev
+umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys"
 
 # ---------------------------------------------------------------------------
 log "4/6 userdata-Vorlage$([[ $BUNDLE == 1 ]] && echo " + gebündelte Emulatoren")"
@@ -164,7 +183,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "5/6 Image erzeugen"
-ROOT_MB=$(( $(du -sm "$ROOT" | cut -f1) * 115 / 100 + 200 ))
+ROOT_MB=$(( $(du -smx "$ROOT" | cut -f1) * 115 / 100 + 200 ))
 DATA_MB=512                                 # grows to the whole disk on first boot
 BOOT_MB=256
 TOTAL_MB=$(( 2 + BOOT_MB + ROOT_MB + DATA_MB + 2 ))

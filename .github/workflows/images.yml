@@ -66,8 +66,20 @@ jobs:
       - name: Build-Abhängigkeiten
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q mmdebstrap qemu-user-static binfmt-support dosfstools exfatprogs \
+          sudo apt-get install -y -q mmdebstrap qemu-user-static binfmt-support arch-test dosfstools exfatprogs \
             e2fsprogs fdisk curl gpg rsync xz-utils debian-archive-keyring udev
+      - name: QEMU-Binärformate registrieren (fremde Architekturen)
+        if: matrix.runner == 'ubuntu-24.04'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm,arm64,riscv64
+      - name: Architektur ausführbar?
+        run: |
+          case "${{ matrix.profile }}" in
+            pc-x86_64) a=amd64 ;; pc-i686) a=i386 ;; arm64-uefi|rpi-arm64) a=arm64 ;;
+            rpi-armhf) a=armhf ;; riscv64) a=riscv64 ;;
+          esac
+          arch-test "$a"
       - name: Image bauen
         run: sudo RF_WORK="$RUNNER_TEMP/rf-build" ./os/build.sh "${{ matrix.profile }}" --out "$PWD/out"
       - name: Prüfsumme
