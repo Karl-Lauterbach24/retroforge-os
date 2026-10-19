@@ -96,12 +96,28 @@ cat > "$ROOT/tmp/install.sh" <<'EOS'
 set -u
 export DEBIAN_FRONTEND=noninteractive
 [[ -f /tmp/.apt-updated ]] || { apt-get update -q || exit 1; touch /tmp/.apt-updated; }
+repair() {   # never leave dpkg half-done: configure, fix, and finally drop what stays broken
+  dpkg --configure -a >/dev/null 2>&1; apt-get -f install -y -q >/dev/null 2>&1
+  broken=$(dpkg -l | awk 'NR>5 && $1 !~ /^(ii|rc|un)$/ {print $2}')
+  if [[ -n "$broken" ]]; then
+    echo "  entferne halb installierte Pakete: $broken"
+    dpkg --purge --force-depends $broken >/dev/null 2>&1; apt-get -f install -y -q >/dev/null 2>&1
+  fi
+}
 if [[ "${2:-optional}" == required ]]; then
   apt-get install -y -q --no-install-recommends $1
   exit $?
 fi
-apt-get install -y -q --no-install-recommends $1 >/dev/null 2>&1 && exit 0
-for p in $1; do apt-get install -y -q --no-install-recommends "$p" >/dev/null 2>&1 || echo "  übersprungen: $p"; done
+apt-get install -y -q --no-install-recommends $1 >/tmp/apt.log 2>&1 && exit 0
+echo "  Gruppe fehlgeschlagen, installiere einzeln: $(grep -E '^E: ' /tmp/apt.log | head -2 | tr '\n' ' ')"
+repair
+for p in $1; do
+  if ! apt-get install -y -q --no-install-recommends "$p" >/tmp/apt.log 2>&1; then
+    why=$(grep -E '^E: |Error!|error:|failed' /tmp/apt.log | head -2 | tr '\n' ' ' | cut -c1-220)
+    echo "  übersprungen: $p – ${why:-siehe apt}"
+    repair
+  fi
+done
 EOS
 chmod +x "$ROOT/tmp/install.sh"
 BOOTPKGS=""
@@ -112,14 +128,26 @@ case "$BOOT" in
   grub-efi-riscv64) BOOTPKGS="grub-efi-riscv64-bin grub2-common initramfs-tools" ;;
   rpi)            BOOTPKGS="initramfs-tools" ;;
 esac
-NVPKGS=""
-[[ "${NVIDIA:-0}" == 1 ]] && NVPKGS="nvidia-open-kernel-dkms nvidia-driver firmware-nvidia-gsp linux-headers-amd64"
 log "  Kernel & Bootloader: $KERNEL $BOOTPKGS"
 chroot "$ROOT" /tmp/install.sh "$KERNEL $BOOTPKGS" required
-for group in "$(list $PACKAGE_LISTS)" "$NVPKGS" "$(list ${OPTIONAL_LISTS:-})"; do
+ls "$ROOT/lib/modules" >/dev/null 2>&1 || { echo "Kein Kernel im Image – Abbruch."; exit 1; }
+for group in "$(list $PACKAGE_LISTS)" "$(list ${OPTIONAL_LISTS:-})"; do
   if [[ -n "${group// }" ]]; then chroot "$ROOT" /tmp/install.sh "$group" optional; fi
 done
-ls "$ROOT/lib/modules" >/dev/null 2>&1 || { echo "Kein Kernel im Image – Abbruch."; exit 1; }
+if [[ "${NVIDIA:-0}" == 1 ]]; then
+  # DKMS must build for the image's kernel, not the build host's (uname -r in a chroot).
+  # Debian's DKMS also builds for the newest kernel in /lib/modules once its headers exist,
+  # so the headers go in first, in their own step.
+  KVER_IMG=$(ls "$ROOT/lib/modules" | sort -V | tail -1)
+  log "  NVIDIA-Treiber (DKMS für $KVER_IMG)"
+  chroot "$ROOT" /tmp/install.sh "linux-headers-$KVER_IMG" optional
+  chroot "$ROOT" /tmp/install.sh "nvidia-open-kernel-dkms nvidia-driver firmware-nvidia-gsp" optional
+  if ls "$ROOT"/lib/modules/*/updates/dkms/nvidia*.ko* >/dev/null 2>&1; then
+    log "  NVIDIA-Module gebaut: $(cd "$ROOT/lib/modules" && ls */updates/dkms/ | grep -c nvidia) Dateien"
+  else
+    log "  NVIDIA-Module NICHT gebaut – Image nutzt nouveau (NVK) für alle NVIDIA-Karten"
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 log "3/6 RetroForge installieren & System konfigurieren"
@@ -260,6 +288,25 @@ case "$BOOT" in
     sed -i 's|/boot/efi|/boot/firmware|' "$MNT/etc/fstab" ;;
 esac
 for d in dev proc sys; do umount -l "$MNT/$d"; done
+
+log "Prüfe Boot-Dateien"
+MISSING=0
+need() { for pat in "$@"; do compgen -G "$pat" >/dev/null || { echo "  FEHLT: ${pat#$MNT}"; MISSING=1; }; done; }
+case "$BOOT" in
+  grub-hybrid)      need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+                         "$MNT/boot/grub/i386-pc/core.img" "$MNT/boot/efi/EFI/BOOT/BOOTX64.EFI" ;;
+  grub-hybrid32)    need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+                         "$MNT/boot/grub/i386-pc/core.img" "$MNT/boot/efi/EFI/BOOT/BOOTIA32.EFI" ;;
+  grub-efi-arm64)   need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+                         "$MNT/boot/efi/EFI/BOOT/BOOTAA64.EFI" ;;
+  grub-efi-riscv64) need "$MNT/boot/vmlinuz-*" "$MNT/boot/initrd.img-*" "$MNT/boot/grub/grub.cfg" \
+                         "$MNT/boot/efi/EFI/BOOT/BOOTRISCV64.EFI" ;;
+  rpi)              need "$MNT/boot/efi/config.txt" "$MNT/boot/efi/cmdline.txt" "$MNT/boot/efi/kernel*.img" \
+                         "$MNT/boot/efi/bcm27*.dtb" "$MNT/boot/efi/overlays/vc4-kms-v3d*.dtbo" ;;
+esac
+echo "  Boot-Partition:"; ls "$MNT/boot/efi" | head -30 | sed 's/^/    /'
+[[ $MISSING == 0 ]] || { umount "$MNT/boot/efi"; umount "$MNT"; echo "Boot-Dateien fehlen – Image wäre nicht startfähig."; exit 1; }
+
 umount "$MNT/boot/efi"; umount "$MNT"
 losetup -d "$LOOP"; LOOP=""
 log "Komprimiere …"
