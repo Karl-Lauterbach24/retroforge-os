@@ -41,6 +41,7 @@ class LaunchPlan:
     core_options: Dict[str, str] = field(default_factory=dict)
     ini_patches: list = field(default_factory=list)                 # (file, section, key, value)
     gamescope: List[str] = field(default_factory=list)              # gamescope args (empty = no wrap)
+    wrapper: List[str] = field(default_factory=list)                # fallback compositor, e.g. ["cage", "--"]
     governor: Optional[str] = None
     notes: List[str] = field(default_factory=list)
     settings: Dict[str, object] = field(default_factory=dict)
@@ -48,7 +49,14 @@ class LaunchPlan:
     def full_cmd(self):
         if self.gamescope:
             return ["gamescope"] + self.gamescope + ["--"] + self.cmd
+        if self.wrapper:
+            return list(self.wrapper) + self.cmd
         return list(self.cmd)
+
+    @property
+    def windowed(self):
+        """True when the emulator gets its own Wayland/X11 session (gamescope or cage)."""
+        return bool(self.gamescope or self.wrapper)
 
     def describe(self):
         return " ".join(shlex.quote(c) for c in self.full_cmd()).replace("{appendconfig}", "<retroarch-append.cfg>")
@@ -219,14 +227,21 @@ class Launcher:
         if S.get("video.widescreen") and emu.id == "dolphin":
             extra += ["-C", "GFX.Settings.wideScreenHack=True"]
         plan.cmd = [exe] + extra + args
-        # gamescope: upscaling filters + ReShade shaders for standalone emulators
-        if S.get("emu.gamescope", True) and emu.wrap == "gamescope":
-            if platform.system() == "Linux" and shutil.which("gamescope"):
+        # Standalone emulators (Qt/SDL apps) need Wayland or X11, which the KMS-only OS doesn't run.
+        # gamescope also brings upscaling filters + ReShade; cage is the lean fallback (Debian ships
+        # cage but not gamescope).
+        if S.get("emu.gamescope", True) and emu.wrap == "gamescope" and platform.system() == "Linux":
+            if shutil.which("gamescope"):
                 plan.gamescope = self._gamescope_args(S)
-            else:
+            elif shutil.which("cage"):
+                plan.wrapper = ["cage", "-s", "--"]
+                plan.env.setdefault("QT_QPA_PLATFORM", "wayland;xcb")
+                plan.env.setdefault("SDL_VIDEODRIVER", "wayland,x11")
                 shader = self._shader(S)
                 if S.get("video.upscaler") != "none" or (shader and shader.id != "none"):
-                    plan.notes.append("gamescope fehlt – Upscaler/Filter für Standalone-Emulatoren inaktiv.")
+                    plan.notes.append("Ohne gamescope (nur cage) sind Upscaler/Filter für Standalone-Emulatoren aus.")
+            else:
+                plan.notes.append("Weder gamescope noch cage gefunden – Standalone-Emulatoren brauchen Wayland/X11.")
 
     def _gamescope_args(self, S):
         W, H = self.core.display_size

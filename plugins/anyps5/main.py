@@ -113,8 +113,9 @@ def register(api):
             plan.notes.append("Erwartet: <Spiel>.ps5/app0/eboot.bin (entschlüsselter Dump)")
         elif not port.is_converted(game.path):
             plan.notes.append("Erster Start: das Spiel wird jetzt für Linux konvertiert – das dauert etwas.")
-        if not plan.gamescope:
-            plan.notes.append("AnyPS5 braucht X11/Wayland – bitte 'Standalone in gamescope starten' anlassen.")
+        if not plan.windowed:
+            plan.notes.append("AnyPS5 braucht X11/Wayland (gamescope oder cage) – "
+                              "'Standalone in gamescope starten' bitte anlassen.")
         return plan
 
     api.on("game.before_launch", before_launch)

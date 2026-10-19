@@ -193,6 +193,20 @@ class TestLibraryAndLauncher(Base):
         self.assertIn("GFX.Settings.InternalResolution=4", full)
         self.assertEqual(full[-1], g.path)
 
+    def test_standalone_falls_back_to_cage(self):
+        """Debian 13 has no gamescope: standalone emulators still get a Wayland session via cage."""
+        self.use("gamingpc")
+        self.add("gamecube", "Test (USA).rvz")
+        self.core.library.scan()
+        g = self.core.library.games["gamecube"][0]
+        which = lambda tool: "/usr/bin/cage" if tool == "cage" else None
+        with mock.patch("retroforge.launcher.platform.system", return_value="Linux"), \
+                mock.patch("retroforge.launcher.shutil.which", side_effect=which):
+            plan = self.core.launcher.plan(g)
+        self.assertEqual(plan.full_cmd()[:3], ["cage", "-s", "--"])
+        self.assertTrue(plan.windowed)
+        self.assertIn("wayland", plan.env["QT_QPA_PLATFORM"])
+
     def test_emulator_override_per_game(self):
         self.use("gamingpc")
         self.add("psx", "Test (USA).chd")

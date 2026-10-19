@@ -14,7 +14,24 @@
 - Disc-Plugin: andere Plugins können über `disc_handler` Aktionen für nicht unterstützte Discs anbieten.
 - Dialoge brechen lange Hinweistexte um und heben Warnungen farblich hervor.
 - OS-Image: `udisks2` und Polkit-Regel zum Einhängen von Discs.
-- **Image-Build:** Schlüssel pro Paketquelle (`signed-by`) statt Ersetzen des Schlüsselbunds, DNS und `policy-rc.d` im chroot, Kernel-/Bootloader-Pakete werden nicht mehr still übersprungen, Warten auf Loop-Partitionen, `update-initramfs -u`. Neuer Workflow *OS-Images bauen* baut alle 6 Profile und hängt sie an das Release.
+- **Erste fertige OS-Images** für alle 6 Profile (pc-x86_64, pc-i686, arm64-uefi, rpi-arm64, rpi-armhf, riscv64),
+  gebaut vom neuen Workflow *OS-Images bauen* und am Release angehängt.
+- **Standalone-Emulatoren ohne gamescope:** Debian 13 enthält gamescope nicht; Dolphin, PCSX2, AnyPS5 usw. starten
+  dann in **cage** (Wayland-Kiosk, mit XWayland). Upscaler/ReShade-Filter gibt es nur mit gamescope.
+- **NVIDIA:** Das x86_64-Image enthält den proprietären Treiber 550 (Maxwell bis Ada). Die Treiberwahl beim Booten
+  erkennt, ob das offene oder geschlossene Modul vorliegt, und nimmt für alle übrigen Karten (u. a. RTX 50) nouveau/NVK.
+
+### Image-Build repariert
+- Schlüssel pro Paketquelle (`signed-by`) statt Ersetzen des Schlüsselbunds; Raspberry-Pi- und Raspbian-Schlüssel aus
+  ihren Keyring-Paketen (die alten `.key`-Dateien sind SHA-1-beglaubigt und werden seit 2026-02 abgelehnt).
+- DNS, `policy-rc.d` und `/dev/pts` im chroot; `/proc` & Co. vor `du`/`rsync` ausgehängt.
+- Kernel-/Bootloader-Pakete sind Pflicht und brechen den Build mit Fehlerausgabe ab; bei optionalen Paketen steht der
+  Grund im Log, und halb installierte Pakete (z. B. ein gescheiterter DKMS-Build) werden entfernt statt die
+  Paketverwaltung zu blockieren.
+- exFAT-Datenpartition wird erst beim ersten Start befüllt (Build-Hosts können exFAT oft nicht einhängen).
+- **Bootprüfung:** Kernel, Initramfs, `grub.cfg`, BIOS-`core.img` und EFI-Loader bzw. Pi-Firmware, Kernel und
+  Device-Trees müssen im Image liegen, sonst schlägt der Build fehl.
+- QEMU-Binärformate für armhf/riscv64, Warten auf Loop-Partitionen, `update-initramfs -u`.
 
 ## 0.1.1 – 2026-10-19 · Vorschau
 

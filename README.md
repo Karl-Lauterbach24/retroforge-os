@@ -16,7 +16,7 @@ Es basiert auf Debian. Die Oberfläche läuft direkt auf KMS/DRM, also ohne Desk
 |---|---|
 | **Hardware-Leiter** | Beim Start werden CPU (Takt × IPC-Schätzung, AVX/AVX2/NEON), GPU (Klasse 0–5, Treiber, VRAM), Vulkan-Version und RAM erkannt. Daraus berechnet das System für jede Konsole den Status *flüssig / spielbar / experimentell / nicht möglich* und zeigt die **höchste lauffähige Konsole** an. Dazu kommt das **nächste Ziel** samt Begründung, z. B. „PS4: CPU-Befehlssatz AVX2 fehlt“. |
 | **Einstellungen in 3 Ebenen** | Global → pro System → pro Spiel. Dazu gehören Shader/Filter (CRT-Royale, CRT-Lottes, CRT-Geom, Scanlines, LCD-Raster, Game-Boy-Punktmatrix, xBRZ, ScaleFX …), Skalierung (ganzzahlig, einpassen, strecken), Seitenverhältnis, **interne 3D-Auflösung (Upscaling)**, FSR/NIS-Upscaler, Run-Ahead, Rewind, Auto-Save, Bildschirmdrehung (TATE), Grafik-API, VRR, CPU-Profil und Emulatorwahl. Jede Zeile zeigt an, von wo sie ihren Wert *erbt*. |
-| **Filter auch für Standalone-Emulatoren** | RetroArch-Kerne bekommen Slang-Shader. Dolphin, PCSX2, RPCS3 usw. laufen in **gamescope** und bekommen darüber FSR, NIS, Pixel-Art-Scaling und ReShade-CRT-Effekte. |
+| **Filter auch für Standalone-Emulatoren** | RetroArch-Kerne bekommen Slang-Shader. Dolphin, PCSX2, RPCS3 usw. laufen in **gamescope** und bekommen darüber FSR, NIS, Pixel-Art-Scaling und ReShade-CRT-Effekte. Debian 13 enthält gamescope nicht; ohne gamescope starten sie im schlanken Wayland-Kiosk **cage**, dann allerdings ohne diese Filter. |
 | **ROMs direkt im OS laden** | USB-Stick einstecken, dann *Spiele importieren*. Header-Erkennung (NES, GB/GBC, GBA, NDS, N64, Mega Drive, PS1/PS2/PSP-ISOs, GameCube/Wii, Switch, 3DS …) sortiert die Dateien automatisch ein, BIOS-Dateien landen in `bios/`. Alternativ per **Web-Upload vom Handy** (PIN-geschützt) oder über die exFAT-Partition am PC. |
 | **Spiele von Disc** | CD oder DVD einlegen: RetroForge erkennt das System (PS1, PS2, Saturn, Mega-CD, PC Engine CD, PC-FX, 3DO, PC-CD-ROMs) und bietet **Direkt spielen** oder **Als CHD sichern** an, auf Wunsch mit Redump-Abgleich und richtigem Spielnamen. Nicht unterstützte Discs bekommen eine klare Meldung mit Begründung: PS4/PS5/Xbox sind verschlüsselt, GameCube/Wii und Dreamcast kann ein PC-Laufwerk nicht lesen. PS3-Discs lassen sich nur über das optionale Plugin [PS3-Disc-Sicherung](plugins/ps3-disc/README.md) sichern, das den Kopierschutz umgeht (auf eigene Gefahr). [Details](plugins/disc/README.md) |
 | **Themes** | 6 eingebaute Themes (Synthwave, Phosphor-Terminal, Game Boy, Famicom (hell), Midnight, Demoscene-Plasma) und 2 Saison-Themes per Plugin. Alles ist prozedural, es gibt keine Asset-Dateien. |
@@ -39,14 +39,15 @@ pip install pygame-ce
 python tools/make_demo_library.py            # legt ./userdata mit Demo-Dateien an
 python -m retroforge --windowed              # Frontend im Fenster
 python -m retroforge --probe                 # Hardware-Bericht + Konsolen-Leiter im Terminal
-python -m unittest discover tests            # 35 Tests
+python -m unittest discover tests            # 36 Tests
 ```
 
 Steuerung per Tastatur: Pfeiltasten, **Enter** = A, **Esc** = B, **Tab** = X (Optionen), **F2** = Y (Favorit), **F1** = Start (Menü), **Bild↑/↓** = L/R. Buchstaben tippen startet die Suche. Gamepads funktionieren sofort.
 
 ## OS-Image bauen
 
-> **Status 0.1.0:** Der Image-Build ist noch experimentell und nicht auf echter Hardware verifiziert.
+> **Status 0.1.2:** Alle 6 Images bauen automatisch in GitHub Actions und hängen am Release. Eine Bootprüfung stellt sicher,
+> dass Kernel, Initramfs und Bootloader bzw. die Pi-Firmware im Image liegen. **Auf echter Hardware gestartet wurden sie noch nicht.**
 > Er lässt sich auch direkt auf GitHub starten: *Actions → OS-Images bauen → Run workflow*.
 
 ```bash
@@ -64,7 +65,7 @@ docker run --rm --privileged -v "$PWD":/src retroforge-builder rpi-arm64 --bundl
 | `rpi-armhf` | Pi Zero/1/2/3 (32-Bit) | Raspberry Pi OS armhf |
 | `riscv64` | VisionFive 2, Milk-V, QEMU (experimentell) | Debian 13 |
 
-**Treiber:** Debians Kernel mit allen Modulen und Mesa (Intel i915/xe, AMD radeon/amdgpu, nouveau/NVK, VideoCore, Mali Lima/Panfrost/Panthor, Adreno, Vivante, virgl/venus). Dazu kommt die komplette non-free-Firmware für GPUs, WLAN, Bluetooth, Audio-DSPs und Microcode. NVIDIA wird **bei jedem Boot automatisch gewählt**: ab Turing der offene NVIDIA-Treiber, ältere Karten laufen über nouveau. Hybrid-Laptops rendern auf der dedizierten GPU. Das GRUB-Menü enthält einen *sicheren Grafikmodus* und einen *Wartungsmodus*.
+**Treiber:** Debians Kernel mit allen Modulen und Mesa (Intel i915/xe, AMD radeon/amdgpu, nouveau/NVK, VideoCore, Mali Lima/Panfrost/Panthor, Adreno, Vivante, virgl/venus). Dazu kommt die komplette non-free-Firmware für GPUs, WLAN, Bluetooth, Audio-DSPs und Microcode. NVIDIA wird **bei jedem Boot automatisch gewählt**: Das x86_64-Image enthält den proprietären NVIDIA-Treiber 550 (Maxwell bis Ada, also GTX 900 bis RTX 40); ältere Karten und die RTX 50 laufen über nouveau/NVK. Hybrid-Laptops rendern auf der dedizierten GPU. Das GRUB-Menü enthält einen *sicheren Grafikmodus* und einen *Wartungsmodus*.
 
 **Partitionen:** `RF-BOOT` (FAT32), `RF-ROOT` (ext4 ohne Journal, schont SD-Karten) und `RETROFORGE` (**exFAT**). Die exFAT-Partition wächst beim ersten Start auf die ganze Platte und lässt sich an jedem Windows-PC oder Mac direkt mit ROMs, BIOS und Musik befüllen.
 
@@ -97,7 +98,7 @@ Mehr dazu: [Plugins schreiben](docs/PLUGINS.md) · [Themes erstellen](docs/THEME
 - **PS4 (shadPS4)** und **Xbox 360 (Xenia unter Linux)** sind als *experimentell* markiert.
 - Für Switch-Emulatoren gibt es keinen stabilen öffentlichen Download-Kanal. Sie werden deshalb als AppImage nach `/userdata/emulators` kopiert. **ROMs, BIOS, Firmware und Keys liefert das System nicht mit**, du brauchst deine eigenen Dumps.
 - Die Anforderungswerte in `builtin/emulators.py` sind konservative Schätzungen, und die Leistungsklasse lässt sich in den Einstellungen manuell erzwingen.
-- Frontend, Kernlogik, Plugins und Tests liefen unter Windows und in der CI unter Linux: 35 Unit-Tests sowie ein Headless-UI-Durchlauf in allen 8 Themes. **Den Image-Build (`os/`) konnte ich hier nicht ausführen**, weil auf dem Rechner kein Linux, Docker oder WSL verfügbar war. Paketnamen, Shader-Pfade und Release-Asset-Muster sollten beim ersten echten Build geprüft werden. Unbekannte Pakete werden übersprungen, statt den Build abzubrechen.
+- Frontend, Kernlogik, Plugins und Tests liefen unter Windows und in der CI unter Linux: 36 Unit-Tests sowie ein Headless-UI-Durchlauf in allen 8 Themes. Die 6 OS-Images werden in GitHub Actions gebaut und automatisch auf startfähige Boot-Dateien geprüft, sind aber **noch nicht auf echter Hardware gebootet** worden. Optionale Pakete, die eine Distribution nicht hat (z. B. gamescope in Debian 13), werden mit Begründung im Build-Log übersprungen.
 
 ## Roadmap-Ideen
 
