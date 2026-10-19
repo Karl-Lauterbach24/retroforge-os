@@ -80,6 +80,9 @@ class EmulatorManager:
             return self.core.hw.family in BUILDBOT_ARCH
         if src.get("type") == "github":
             return self.core.hw.family in src.get("assets", {})
+        if src.get("type") == "custom":   # plugin-provided installer
+            check = src.get("can_install")
+            return bool(check(self.core)) if callable(check) else True
         return False
 
     def install_hint(self, emu):
@@ -87,6 +90,8 @@ class EmulatorManager:
         t = src.get("type")
         if t == "apt":
             return f"Im OS-Image über das Paket '{src['package']}' enthalten (Build-Profil)."
+        if t == "custom":
+            return src.get("hint", "")
         if t == "manual":
             return src.get("hint", "Manuell nach /userdata/emulators kopieren.")
         if t == "github" and self.core.hw.family not in src.get("assets", {}):
@@ -97,6 +102,8 @@ class EmulatorManager:
         """Blocking download+install. Raises on failure. Returns installed path."""
         src = emu.source or {}
         fam = self.core.hw.family
+        if src.get("type") == "custom":
+            return src["install"](self, emu, progress)
         if src.get("type") == "libretro":
             url = (f"https://buildbot.libretro.com/nightly/linux/{BUILDBOT_ARCH[fam]}/latest/"
                    f"{emu.core}_libretro.so.zip")
@@ -108,15 +115,7 @@ class EmulatorManager:
             tmp.unlink()
             return self.core_path(emu.core)
         if src.get("type") == "github":
-            pattern = re.compile(src["assets"][fam])
-            api = f"https://api.github.com/repos/{src['repo']}/releases/latest"
-            req = urllib.request.Request(api, headers={"User-Agent": USER_AGENT,
-                                                       "Accept": "application/vnd.github+json"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                rel = json.load(r)
-            asset = next((a for a in rel.get("assets", []) if pattern.search(a["name"])), None)
-            if not asset:
-                raise RuntimeError(f"Kein passendes Release-Asset für {fam} gefunden")
+            asset = self.latest_asset(src["repo"], src["assets"][fam])
             dest = self.core.paths.emulators / asset["name"]
             self._download(asset["browser_download_url"], dest, progress)
             if dest.suffix.lower() == ".appimage":
@@ -142,6 +141,23 @@ class EmulatorManager:
                     p.chmod(p.stat().st_mode | stat.S_IXUSR)
             return self.standalone_path(emu)
         raise RuntimeError(self.install_hint(emu) or "Keine Installationsquelle bekannt")
+
+    def latest_asset(self, repo, pattern):
+        """The newest release asset of a GitHub repo whose name matches ``pattern``."""
+        api = f"https://api.github.com/repos/{repo}/releases/latest"
+        req = urllib.request.Request(api, headers={"User-Agent": USER_AGENT,
+                                                   "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            rel = json.load(r)
+        rx = re.compile(pattern)
+        asset = next((a for a in rel.get("assets", []) if rx.search(a["name"])), None)
+        if not asset:
+            raise RuntimeError(f"Kein passendes Release-Asset ({pattern}) in {repo} gefunden")
+        asset["release_tag"] = rel.get("tag_name", "")
+        return asset
+
+    def download(self, url, dest, progress=None):
+        self._download(url, dest, progress)
 
     def _download(self, url, dest, progress=None):
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})

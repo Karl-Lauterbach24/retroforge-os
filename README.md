@@ -82,7 +82,7 @@ retroforge/            Kern (UI-frei, auch headless nutzbar)
   romdetect.py         Header-Magie + Dateiendungen
   ui/                  pygame-Frontend: Screens, Themes, Hintergründe, Synth-Audio, Eingabe
 themes/<id>/theme.json Themes (Farben, Hintergrund, Schrift, Musik-Parameter, Soundpack)
-plugins/<id>/          mitgelieferte Plugins (Statistik, Backup, Web-Upload, Schoner, RA, Saison)
+plugins/<id>/          mitgelieferte Plugins (Statistik, Backup, Web-Upload, Schoner, RA, Saison, AnyPS5)
 os/                    Image-Build: Profile, Paketlisten, rootfs-Overlay, Bootloader
 tools/                 Demo-Bibliothek, Headless-Screenshots
 ```
@@ -91,7 +91,8 @@ Mehr dazu: [Plugins schreiben](docs/PLUGINS.md) · [Themes erstellen](docs/THEME
 
 ## Ehrliche Grenzen (Stand Oktober 2026)
 
-- **PS5, Xbox Series und Switch 2** sind als Systeme angelegt, aber **es gibt keinen lauffähigen Emulator**. Die Leiter zeigt sie deshalb als „kein Emulator“. Sobald es einen gibt, reicht ein Plugin mit `add_emulator()` und `add_emulator_to_system()`. Ein Unit-Test zeigt genau das am Beispiel PS5.
+- **PS5:** Einen klassischen PS5-Emulator gibt es nicht. Seit September 2026 portiert aber [AnyPS5](https://github.com/boykopovar/AnyPS5) einzelne PS5-Spiele **ohne Emulation**: Die ausführbaren Dateien werden in native Linux-Programme umgelinkt, der Zen-2-Code läuft direkt auf der CPU, Shader werden nach Vulkan übersetzt. Laut [Kompatibilitätsliste](https://alxcbtw.github.io/anyps5-roadmap/) (Stand 13.10.2026) sind erst 4 kommerzielle Spiele bestätigt spielbar (Animal Well, Dreaming Sarah, Hollow Knight: Silksong, Road of Death), einige weitere erreichen das Menü. RetroForge bindet AnyPS5 über das Plugin [`plugins/anyps5`](plugins/anyps5/README.md) ein: PS5 erscheint in der Leiter als **experimentell** und zählt nie als „höchste lauffähige Konsole“. Nötig sind ein x86-64-Prozessor mit AVX2/BMI2/MOVBE, Vulkan 1.3 und ein **eigener, entschlüsselter Dump**.
+- **Xbox Series und Switch 2** sind als Systeme angelegt, haben aber keinen Emulator. Sobald es einen gibt, reicht ein Plugin mit `add_emulator()` und `add_emulator_to_system()`.
 - **PS4 (shadPS4)** und **Xbox 360 (Xenia unter Linux)** sind als *experimentell* markiert.
 - Für Switch-Emulatoren gibt es keinen stabilen öffentlichen Download-Kanal. Sie werden deshalb als AppImage nach `/userdata/emulators` kopiert. **ROMs, BIOS, Firmware und Keys liefert das System nicht mit**, du brauchst deine eigenen Dumps.
 - Die Anforderungswerte in `builtin/emulators.py` sind konservative Schätzungen, und die Leistungsklasse lässt sich in den Einstellungen manuell erzwingen.

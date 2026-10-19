@@ -32,12 +32,13 @@ PROFILES = {
                           gpus=[GpuInfo(name="Intel G45", vendor="intel", driver="i915", device_id="0x2e22",
                                         integrated=True)]),
     "deck": HardwareInfo(arch="x86_64", family="x86_64", cpu_model="AMD Custom APU 0405", cores=4, threads=8,
-                         max_mhz=3500, isa=["sse4_1", "sse4_2", "avx", "avx2", "f16c", "bmi1"], ram_mb=16384,
+                         max_mhz=3500, isa=["sse4_1", "sse4_2", "avx", "avx2", "f16c", "bmi1", "bmi2", "fma", "abm",
+                                                  "movbe"], ram_mb=16384,
                          gpus=[GpuInfo(name="AMD Radeon", vendor="amd", driver="amdgpu", device_id="0x163f",
                                        vram_mb=1024, integrated=True)], vulkan="1.3"),
     "gamingpc": HardwareInfo(arch="x86_64", family="x86_64", cpu_model="AMD Ryzen 7 7800X3D", cores=8, threads=16,
                              max_mhz=5000, isa=["sse4_1", "sse4_2", "avx", "avx2", "avx512f", "vaes", "f16c",
-                                                "bmi1"], ram_mb=32768,
+                                                "bmi1", "bmi2", "fma", "abm", "movbe"], ram_mb=32768,
                              gpus=[GpuInfo(name="NVIDIA GeForce RTX 4070", vendor="nvidia", driver="nvidia",
                                            vram_mb=12288, integrated=False)], vulkan="1.3"),
 }
@@ -82,8 +83,9 @@ class TestTiers(Base):
         self.assertGreaterEqual(a.status("switch"), tiers.PLAYABLE)
         a = self.use("gamingpc")
         self.assertEqual(a.status("ps3"), tiers.FULL)
-        self.assertEqual(a.max_console, "switch")                    # PS4 is experimental only
-        self.assertEqual(a.status("ps5"), tiers.UNAVAILABLE)
+        self.assertEqual(a.max_console, "switch")                    # PS4/PS5 are experimental only
+        self.assertEqual(a.status("ps5"), tiers.EXPERIMENTAL)        # AnyPS5 plugin
+        self.assertEqual(a.status("xboxseries"), tiers.UNAVAILABLE)
 
     def test_arch_and_isa_blockers_are_reported(self):
         a = self.use("core2")
@@ -237,12 +239,99 @@ class TestPlugins(unittest.TestCase):
         tmp = tempfile.mkdtemp(prefix="rf-plug-")
         try:
             core = Core(tmp).boot(do_probe=False, scan=False)
-            for pid in ("stats", "save-backup", "web-upload", "screensaver", "retroachievements", "seasonal"):
+            for pid in ("stats", "save-backup", "web-upload", "screensaver", "retroachievements", "seasonal",
+                        "anyps5"):
                 self.assertEqual(core.plugins.plugins[pid].status, "loaded", core.plugins.plugins[pid].error)
             self.assertTrue(core.registry.has("theme", "halloween"))
             self.assertTrue(core.registry.has("setting", "backup.keep"))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+FAKE_RELINKER = r"""
+import sys, pathlib
+args = sys.argv[1:]
+smp = pathlib.Path(args[args.index("--sce-module-path") + 1])
+inp, out = pathlib.Path(args[-2]), pathlib.Path(args[-1])
+assert inp.name == "eboot.bin" and smp.name == "input", "modules must come from .anyps5/input, not app0/"
+out.write_text("native " + ("intel" if "--to-intel" in args else "amd"))
+for m in (smp / "sce_module").glob("*.prx"):
+    dest = out.parent / "app0" / "sce_module" / m.name
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("converted")
+with open(pathlib.Path(__file__).with_suffix(".count"), "a") as f:
+    f.write("x")
+"""
+
+
+class TestAnyPS5(Base):
+    def port(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "anyps5_port_test", Path(__file__).resolve().parent.parent / "plugins" / "anyps5" / "port.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def make_game(self):
+        game = Path(self.tmp, "roms", "ps5", "Animal Well.ps5")
+        (game / "app0" / "sce_module").mkdir(parents=True)
+        (game / "app0" / "sce_sys").mkdir()
+        (game / "app0" / "eboot.bin").write_bytes(b"\x7fELF" + b"\0" * 60)
+        (game / "app0" / "sce_module" / "libgame.prx").write_text("original")
+        return game
+
+    def test_ladder(self):
+        a = self.use("gamingpc")
+        v = a.verdicts["ps5"]
+        self.assertEqual((v.status, v.emulator), (tiers.EXPERIMENTAL, "anyps5"))
+        self.assertTrue(any("AnyPS5" in r for r in v.reasons))
+        self.assertTrue(any("Architektur" in r for r in self.use("pi5").verdicts["ps5"].reasons))
+        reasons = " ".join(self.use("core2").verdicts["ps5"].reasons)
+        self.assertIn("AVX2", reasons)
+        self.assertIn("MOVBE", reasons)
+
+    def test_launch_plan(self):
+        self.use("gamingpc")
+        game = self.make_game()
+        self.core.library.scan()
+        g = self.core.library.games["ps5"][0]
+        self.assertTrue(g.is_dir)
+        plan = self.core.launcher.plan(g)
+        self.assertEqual(plan.emulator.id, "anyps5")
+        self.assertTrue(plan.cmd[1].endswith("port.py"))
+        self.assertEqual(plan.cmd[plan.cmd.index("--game") + 1], str(game))
+        self.assertNotIn("--to-intel", plan.cmd)                 # Ryzen: no rewrite
+        self.assertTrue(any("Erster Start" in n for n in plan.notes))
+        self.core.hw = HardwareInfo(**{**PROFILES["gamingpc"].__dict__, "cpu_model": "Intel Core i7-14700K"})
+        self.assertIn("--to-intel", self.core.launcher.plan(g).cmd)
+
+    def test_convert_once_and_restore(self):
+        port = self.port()
+        game = self.make_game()
+        libs = Path(self.tmp, "libs")
+        libs.mkdir()
+        fake = Path(self.tmp, "fake_relinker.py")
+        fake.write_text(FAKE_RELINKER)
+        cmd = [sys.executable, str(fake)]
+        exe = port.prepare(cmd, libs, game, to_intel=True, log=lambda *a: None)
+        self.assertEqual(exe.read_text(), "native intel")
+        self.assertEqual((game / "app0/sce_module/libgame.prx").read_text(), "converted")
+        self.assertEqual((game / ".anyps5/input/sce_module/libgame.prx").read_text(), "original")
+        port.prepare(cmd, libs, game, to_intel=True, log=lambda *a: None)
+        self.assertEqual(fake.with_suffix(".count").read_text(), "x")   # cached, not converted again
+        port.prepare(cmd, libs, game, to_intel=False, log=lambda *a: None)
+        self.assertEqual(fake.with_suffix(".count").read_text(), "xx")  # flag changed -> reconverted
+        port.restore(game, log=lambda *a: None)
+        self.assertEqual((game / "app0/sce_module/libgame.prx").read_text(), "original")
+        self.assertFalse((game / "app.elf").exists() or (game / ".anyps5").exists())
+
+    def test_rejects_encrypted_dump(self):
+        port = self.port()
+        game = self.make_game()
+        (game / "app0" / "eboot.bin").write_bytes(b"\x54\x14\xf5\xee" + b"\0" * 60)
+        with self.assertRaises(port.PortError):
+            port.prepare([sys.executable, "x"], self.tmp, game, log=lambda *a: None)
 
 
 class TestRomDetect(Base):

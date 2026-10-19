@@ -71,6 +71,8 @@ def register(api):
     api.add_emulator_to_system("ps5", "neo-ps5")
 ```
 
+Ein echtes Beispiel dafür ist [`plugins/anyps5`](../plugins/anyps5/main.py): Es hängt AnyPS5 an die PS5, bringt einen eigenen Installer mit (`source={"type": "custom", ...}`) und ersetzt per `game.before_launch` den Startbefehl durch einen Wrapper, der beim ersten Start konvertiert.
+
 Ab dann zeigt die Hardware-Leiter, ob die Maschine PS5 schafft. Der Emulator lässt sich aus dem Emulatoren-Bildschirm installieren, und die Shader- und Upscaling-Einstellungen greifen automatisch über gamescope.
 
 ## Beispiel: jeden Start verändern

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unveröffentlicht
+
+### Neu
+- **Plugin `anyps5`:** experimentelle PS5-Unterstützung über [AnyPS5](https://github.com/boykopovar/AnyPS5) (Relinker statt Emulation). Das Spiel wird beim ersten Start für Linux konvertiert und danach direkt gestartet; die Original-Module bleiben erhalten und lassen sich wiederherstellen. Installation von Relinker und Systembibliotheken aus den offiziellen Releases, AMD→Intel-Umschreibung automatisch nach CPU.
+- Hardware-Leiter prüft jetzt auch BMI2, FMA, LZCNT und MOVBE (Zen-2-Befehlssatz der PS5).
+- Emulator-Manager: Plugins können eigene Installer mitbringen (`source = {"type": "custom", ...}`).
+- OS-Image: Zugriff auf `/dev/udmabuf` für die Frontend-Sitzung.
+
+### Korrigiert
+- Hinweis zur PS5: Es gibt zwar keinen Emulator, einzelne Spiele laufen aber experimentell über AnyPS5.
+- Hardware-Bericht (`--probe`) bricht in Windows-Konsolen (cp1252) nicht mehr ab.
+
 ## 0.1.0 – 2026-10-19 · erstes Release (Vorschau)
 
 ### Frontend
@@ -24,4 +36,4 @@
 
 ### Bekannte Einschränkungen
 - Der Image-Build ist in diesem Release **noch nicht auf echter Hardware verifiziert**; Paketnamen, Shader-Pfade und Release-Asset-Muster können Anpassungen brauchen.
-- PS5, Xbox Series und Switch 2 haben keinen Emulator (Stand 2026); PS4 und Xbox 360 gelten als experimentell.
+- Xbox Series und Switch 2 haben keinen Emulator (Stand 2026); PS4 und Xbox 360 gelten als experimentell. Für die PS5 siehe den Eintrag *Unveröffentlicht* (AnyPS5).

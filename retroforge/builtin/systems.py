@@ -81,7 +81,8 @@ SYSTEMS = [
     s("ps4", "PlayStation 4", "PS4", "Sony", 2013, [".ps4"], ["shadps4"],
       color="#003791", demand=70, ladder=True),
     s("ps5", "PlayStation 5", "PS5", "Sony", 2020, [".ps5"], [], color="#ffffff", demand=92, ladder=True,
-      note="Stand 2026 gibt es keinen lauffähigen PS5-Emulator – das System ist vorbereitet."),
+      note="Es gibt keinen klassischen PS5-Emulator. Einzelne Spiele laufen experimentell über das "
+           "AnyPS5-Plugin (Relinker, keine Emulation)."),
     s("psp", "PlayStation Portable", "PSP", "Sony", 2004, [".iso", ".cso", ".pbp", ".chd"],
       ["ppsspp_lr", "ppsspp"], kind="handheld", color="#1f1f1f", demand=18, ladder=True),
     s("psvita", "PlayStation Vita", "VITA", "Sony", 2011, [".psvita"], ["vita3k"],

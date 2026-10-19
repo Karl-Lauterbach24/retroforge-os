@@ -155,7 +155,8 @@ class Capabilities:
 
 
 ISA_LABEL = {"avx2": "AVX2", "avx": "AVX", "sse4_1": "SSE4.1", "sse4_2": "SSE4.2", "f16c": "F16C",
-             "bmi1": "BMI1", "avx512f": "AVX-512"}
+             "bmi1": "BMI1", "bmi2": "BMI2", "fma": "FMA", "abm": "LZCNT", "movbe": "MOVBE",
+             "avx512f": "AVX-512"}
 
 
 def check(req: Req, cap: Capabilities):

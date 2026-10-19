@@ -299,7 +299,7 @@ def _probe_windows(hw):
     # Win32_Processor reports the base clock; estimate the boost clock instead.
     hw.max_mhz = max(hw.max_mhz, bench_mhz())
     if "avx2" in hw.isa:   # every AVX2 CPU also has these (not exposed by IsProcessorFeaturePresent)
-        hw.isa += [f for f in ("f16c", "bmi1", "fma") if f not in hw.isa]
+        hw.isa += [f for f in ("f16c", "bmi1", "bmi2", "fma", "abm", "movbe") if f not in hw.isa]
     real = [g for g in hw.gpus if g.vendor not in ("virtual", "firmware", "")]
     if real:
         hw.gpus = real

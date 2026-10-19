@@ -1,0 +1,2 @@
+# AnyPS5 imports shared PS5 direct memory through udmabuf (Mesa drivers)
+KERNEL=="udmabuf", MODE="0660", GROUP="video"
