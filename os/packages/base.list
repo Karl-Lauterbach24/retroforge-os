@@ -34,6 +34,9 @@ python3-pygame
 fonts-dejavu-core
 vulkan-tools
 mesa-utils-bin
+# --- optical drives: play from disc, save as CHD (plugin 'disc') ---
+cdrdao
+mame-tools
 # --- input: controllers ---
 bluez
 joystick

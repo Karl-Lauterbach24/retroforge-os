@@ -18,6 +18,7 @@ Es basiert auf Debian. Die Oberfläche läuft direkt auf KMS/DRM, also ohne Desk
 | **Einstellungen in 3 Ebenen** | Global → pro System → pro Spiel. Dazu gehören Shader/Filter (CRT-Royale, CRT-Lottes, CRT-Geom, Scanlines, LCD-Raster, Game-Boy-Punktmatrix, xBRZ, ScaleFX …), Skalierung (ganzzahlig, einpassen, strecken), Seitenverhältnis, **interne 3D-Auflösung (Upscaling)**, FSR/NIS-Upscaler, Run-Ahead, Rewind, Auto-Save, Bildschirmdrehung (TATE), Grafik-API, VRR, CPU-Profil und Emulatorwahl. Jede Zeile zeigt an, von wo sie ihren Wert *erbt*. |
 | **Filter auch für Standalone-Emulatoren** | RetroArch-Kerne bekommen Slang-Shader. Dolphin, PCSX2, RPCS3 usw. laufen in **gamescope** und bekommen darüber FSR, NIS, Pixel-Art-Scaling und ReShade-CRT-Effekte. |
 | **ROMs direkt im OS laden** | USB-Stick einstecken, dann *Spiele importieren*. Header-Erkennung (NES, GB/GBC, GBA, NDS, N64, Mega Drive, PS1/PS2/PSP-ISOs, GameCube/Wii, Switch, 3DS …) sortiert die Dateien automatisch ein, BIOS-Dateien landen in `bios/`. Alternativ per **Web-Upload vom Handy** (PIN-geschützt) oder über die exFAT-Partition am PC. |
+| **Spiele von Disc** | CD oder DVD einlegen: RetroForge erkennt das System (PS1, PS2, Saturn, Mega-CD, PC Engine CD, PC-FX, 3DO, PC-CD-ROMs) und bietet **Direkt spielen** oder **Als CHD sichern** an, auf Wunsch mit Redump-Abgleich und richtigem Spielnamen. Verschlüsselte Discs (PS3/PS4/PS5, Xbox) und Formate, die PC-Laufwerke nicht lesen (GameCube/Wii, Dreamcast), werden erkannt und erklärt. [Details](plugins/disc/README.md) |
 | **Themes** | 6 eingebaute Themes (Synthwave, Phosphor-Terminal, Game Boy, Famicom (hell), Midnight, Demoscene-Plasma) und 2 Saison-Themes per Plugin. Alles ist prozedural, es gibt keine Asset-Dateien. |
 | **Musik & Sounds** | Jedes Theme erzeugt **seine eigene Chiptune-Musik** (Tempo, Tonart, Akkordfolge aus dem Theme-JSON, deterministisch und gecacht). Alternativ läuft eigene Musik aus `/userdata/music` (Playlist oder Zufall). Es gibt 3 Menü-Soundpacks; die Musik wird im Spiel ausgeblendet. |
 | **Plugins für alles** | Systeme, Emulatoren, Shader, Settings, Themes, Hintergründe, Sound-Packs, Screens, Menüeinträge, Sammlungen und ROM-Detektoren. Dazu kommen Hooks wie `game.before_launch` (Startbefehl umbauen), `hw.probed` und `ui.idle`. Der Kern registriert seine eigenen Inhalte über dieselbe API, deshalb ist jedes Built-in ersetzbar. |
@@ -38,7 +39,7 @@ pip install pygame-ce
 python tools/make_demo_library.py            # legt ./userdata mit Demo-Dateien an
 python -m retroforge --windowed              # Frontend im Fenster
 python -m retroforge --probe                 # Hardware-Bericht + Konsolen-Leiter im Terminal
-python -m unittest discover tests            # 16 Tests
+python -m unittest discover tests            # 32 Tests
 ```
 
 Steuerung per Tastatur: Pfeiltasten, **Enter** = A, **Esc** = B, **Tab** = X (Optionen), **F2** = Y (Favorit), **F1** = Start (Menü), **Bild↑/↓** = L/R. Buchstaben tippen startet die Suche. Gamepads funktionieren sofort.
@@ -82,7 +83,7 @@ retroforge/            Kern (UI-frei, auch headless nutzbar)
   romdetect.py         Header-Magie + Dateiendungen
   ui/                  pygame-Frontend: Screens, Themes, Hintergründe, Synth-Audio, Eingabe
 themes/<id>/theme.json Themes (Farben, Hintergrund, Schrift, Musik-Parameter, Soundpack)
-plugins/<id>/          mitgelieferte Plugins (Statistik, Backup, Web-Upload, Schoner, RA, Saison, AnyPS5)
+plugins/<id>/          mitgelieferte Plugins (Statistik, Backup, Web-Upload, Schoner, RA, Saison, AnyPS5, Disc)
 os/                    Image-Build: Profile, Paketlisten, rootfs-Overlay, Bootloader
 tools/                 Demo-Bibliothek, Headless-Screenshots
 ```
@@ -96,7 +97,7 @@ Mehr dazu: [Plugins schreiben](docs/PLUGINS.md) · [Themes erstellen](docs/THEME
 - **PS4 (shadPS4)** und **Xbox 360 (Xenia unter Linux)** sind als *experimentell* markiert.
 - Für Switch-Emulatoren gibt es keinen stabilen öffentlichen Download-Kanal. Sie werden deshalb als AppImage nach `/userdata/emulators` kopiert. **ROMs, BIOS, Firmware und Keys liefert das System nicht mit**, du brauchst deine eigenen Dumps.
 - Die Anforderungswerte in `builtin/emulators.py` sind konservative Schätzungen, und die Leistungsklasse lässt sich in den Einstellungen manuell erzwingen.
-- Frontend, Kernlogik, Plugins und Tests liefen unter Windows: 16 Unit-Tests sowie ein Headless-UI-Durchlauf in allen 8 Themes. **Den Image-Build (`os/`) konnte ich hier nicht ausführen**, weil auf dem Rechner kein Linux, Docker oder WSL verfügbar war. Paketnamen, Shader-Pfade und Release-Asset-Muster sollten beim ersten echten Build geprüft werden. Unbekannte Pakete werden übersprungen, statt den Build abzubrechen.
+- Frontend, Kernlogik, Plugins und Tests liefen unter Windows und in der CI unter Linux: 32 Unit-Tests sowie ein Headless-UI-Durchlauf in allen 8 Themes. **Den Image-Build (`os/`) konnte ich hier nicht ausführen**, weil auf dem Rechner kein Linux, Docker oder WSL verfügbar war. Paketnamen, Shader-Pfade und Release-Asset-Muster sollten beim ersten echten Build geprüft werden. Unbekannte Pakete werden übersprungen, statt den Build abzubrechen.
 
 ## Roadmap-Ideen
 

@@ -94,8 +94,8 @@ echo retroforge > /etc/hostname
 printf '127.0.1.1\tretroforge retroforge.local\n' >> /etc/hosts
 sed -i 's/^# *de_DE.UTF-8/de_DE.UTF-8/; s/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && locale-gen >/dev/null
 echo 'LANG=de_DE.UTF-8' > /etc/default/locale
-id rf >/dev/null 2>&1 || useradd -m -u 1000 -s /bin/bash -G input,video,render,audio,plugdev,bluetooth rf || \
-  useradd -m -u 1000 -s /bin/bash -G input,video,audio rf
+id rf >/dev/null 2>&1 || useradd -m -u 1000 -s /bin/bash -G input,video,render,audio,cdrom,plugdev,bluetooth rf || \
+  useradd -m -u 1000 -s /bin/bash -G input,video,audio,cdrom rf
 passwd -d rf >/dev/null
 echo 'rf ALL=(root) NOPASSWD: /usr/local/sbin/retroforge-*' > /etc/sudoers.d/retroforge
 chmod 440 /etc/sudoers.d/retroforge

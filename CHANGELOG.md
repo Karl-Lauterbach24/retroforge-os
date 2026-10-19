@@ -1,12 +1,14 @@
 # Changelog
 
-## Unveröffentlicht
+## 0.1.1 – 2026-10-19 · Vorschau
 
 ### Neu
+- **Plugin `disc`:** CDs und DVDs beim Einlegen erkennen (PS1, PS2, Saturn, Mega-CD, PC Engine CD, PC-FX, 3DO, PC-CD-ROMs) und entweder **direkt vom Laufwerk spielen** (DuckStation, PCSX2, RetroArch-Kerne über `cdrom://`) oder **als CHD sichern** (cdrdao mit Audiospuren bzw. Sektorkopie, `chdman`). Optionaler Abgleich mit Redump-/No-Intro-DATs in `/userdata/system/dats`, der auch den richtigen Spielnamen liefert. Verschlüsselte oder für PC-Laufwerke unlesbare Discs (PS3/PS4/PS5, Xbox, GameCube/Wii, Dreamcast) werden erkannt und erklärt.
+- ISO-9660-Leser im Kern: Der ROM-Import unterscheidet PS1 und PS2 jetzt zuverlässig über `SYSTEM.CNF`.
 - **Plugin `anyps5`:** experimentelle PS5-Unterstützung über [AnyPS5](https://github.com/boykopovar/AnyPS5) (Relinker statt Emulation). Das Spiel wird beim ersten Start für Linux konvertiert und danach direkt gestartet; die Original-Module bleiben erhalten und lassen sich wiederherstellen. Installation von Relinker und Systembibliotheken aus den offiziellen Releases, AMD→Intel-Umschreibung automatisch nach CPU.
 - Hardware-Leiter prüft jetzt auch BMI2, FMA, LZCNT und MOVBE (Zen-2-Befehlssatz der PS5).
 - Emulator-Manager: Plugins können eigene Installer mitbringen (`source = {"type": "custom", ...}`).
-- OS-Image: Zugriff auf `/dev/udmabuf` für die Frontend-Sitzung.
+- OS-Image: Zugriff auf `/dev/udmabuf` für die Frontend-Sitzung; `cdrdao`, `mame-tools` (chdman) und die Gruppe `cdrom`.
 
 ### Korrigiert
 - Hinweis zur PS5: Es gibt zwar keinen Emulator, einzelne Spiele laufen aber experimentell über AnyPS5.
@@ -36,4 +38,4 @@
 
 ### Bekannte Einschränkungen
 - Der Image-Build ist in diesem Release **noch nicht auf echter Hardware verifiziert**; Paketnamen, Shader-Pfade und Release-Asset-Muster können Anpassungen brauchen.
-- Xbox Series und Switch 2 haben keinen Emulator (Stand 2026); PS4 und Xbox 360 gelten als experimentell. Für die PS5 siehe den Eintrag *Unveröffentlicht* (AnyPS5).
+- Xbox Series und Switch 2 haben keinen Emulator (Stand 2026); PS4 und Xbox 360 gelten als experimentell. Für die PS5 siehe 0.1.1 (AnyPS5).

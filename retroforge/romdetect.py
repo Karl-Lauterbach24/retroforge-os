@@ -115,4 +115,14 @@ def detect(path, registry):
                 return r
         except Exception:
             pass
+    if _at(head, 0x8001, b"CD001"):
+        # cooked ISO: SYSTEM.CNF tells PS1 (BOOT) and PS2 (BOOT2) apart reliably
+        from .iso9660 import ISO9660, playstation_info
+        try:
+            with open(path, "rb") as f:
+                system, _ = playstation_info(ISO9660(f))
+            if system:
+                return system
+        except (OSError, ValueError, KeyError):
+            pass
     return header_detect(path, head) or _unique_ext_map(registry).get(ext)
