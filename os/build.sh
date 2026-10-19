@@ -83,8 +83,8 @@ find "$ROOT/etc/apt" -name '*.list' -o -name '*.sources' | xargs -r sed -i "s|$K
 
 # ---------------------------------------------------------------------------
 log "2/6 Pakete, Kernel & Treiber"
-mount --bind /dev "$ROOT/dev"; mount -t proc proc "$ROOT/proc"; mount -t sysfs sys "$ROOT/sys"
-cleanup() { umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true; [[ -n "${LOOP:-}" ]] && losetup -d "$LOOP" 2>/dev/null || true; }
+mount --bind /dev "$ROOT/dev"; mount --bind /dev/pts "$ROOT/dev/pts"; mount -t proc proc "$ROOT/proc"; mount -t sysfs sys "$ROOT/sys"
+cleanup() { umount -lf "$ROOT/dev/pts" "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true; [[ -n "${LOOP:-}" ]] && losetup -d "$LOOP" 2>/dev/null || true; }
 trap cleanup EXIT
 rm -f "$ROOT/etc/resolv.conf"; cp -L /etc/resolv.conf "$ROOT/etc/resolv.conf"   # DNS inside the chroot
 printf '#!/bin/sh\nexit 101\n' > "$ROOT/usr/sbin/policy-rc.d"; chmod +x "$ROOT/usr/sbin/policy-rc.d"
@@ -150,7 +150,7 @@ EOS
 # trim locales to de/en (saves ~100 MB)
 find "$ROOT/usr/share/locale" -mindepth 1 -maxdepth 1 ! -name 'de*' ! -name 'en*' ! -name 'locale.alias' -exec rm -rf {} + || true
 # done with the chroot: unmount, so du/rsync below never see the host's /proc, /sys and /dev
-umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys"
+umount -lf "$ROOT/dev/pts" "$ROOT/dev" "$ROOT/proc" "$ROOT/sys"
 
 # ---------------------------------------------------------------------------
 log "4/6 userdata-Vorlage$([[ $BUNDLE == 1 ]] && echo " + gebündelte Emulatoren")"
@@ -219,7 +219,8 @@ MNT="$WORK/mnt"; mkdir -p "$MNT"
 mount "$P_ROOT" "$MNT"
 rsync -aHAX "$ROOT/" "$MNT/"
 mkdir -p "$MNT/boot/efi" "$MNT/userdata"
-mount "$P_DATA" "$MNT/userdata"; rsync -rt "$SKEL/" "$MNT/userdata/"; touch "$MNT/userdata/.rf-fresh"; umount "$MNT/userdata"
+# The exFAT data partition stays empty here (build hosts often lack exFAT support): on first boot
+# retroforge-firstboot grows it to the whole disk and fills it from /usr/share/retroforge/userdata-skel.
 cat > "$MNT/etc/fstab" <<EOF
 LABEL=RF-ROOT    /          ext4   defaults,noatime,commit=60      0 1
 LABEL=RF-BOOT    /boot/efi  vfat   defaults,noatime,umask=0077     0 2

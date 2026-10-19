@@ -5,7 +5,8 @@
 set -u
 DATA=$(blkid -L RETROFORGE || true)
 if [[ -n "$DATA" ]] && mount "$DATA" /userdata 2>/dev/null; then
-    FRESH=0; [[ -f /userdata/.rf-fresh ]] && FRESH=1
+    # fresh = the image's empty data partition (or an older image's marker); runs only once anyway
+    FRESH=0; [[ -f /userdata/.rf-fresh || -z "$(ls -A /userdata 2>/dev/null)" ]] && FRESH=1
     umount /userdata
     if [[ $FRESH == 1 ]]; then
         DISK="/dev/$(lsblk -no pkname "$DATA")"
